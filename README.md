@@ -1,5 +1,7 @@
 # Hospital Management System (HMS)
 
+Added line
+
 ## Overview
 The Hospital Management System (HMS) is a comprehensive healthcare operations platform designed to digitize and automate hospital workflows. The platform centralizes patient records, appointments, billing, laboratory operations, pharmacy management, reporting, and administrative activities into a single scalable ecosystem.
 
