@@ -1,364 +1,215 @@
 # Hospital Management System (HMS)
 
-## Overview
-The Hospital Management System (HMS) is a comprehensive healthcare operations platform designed to digitize and automate hospital workflows. The platform centralizes patient records, appointments, billing, laboratory operations, pharmacy management, reporting, and administrative activities into a single scalable ecosystem.
+The Hospital Management System (HMS) is a modular, microservices-based platform that
+streamlines hospital operations, improves patient care, automates clinical and administrative
+workflows, and centralizes healthcare data management across departments. It provides a single
+digital backbone for the people and processes that keep a hospital running — from patient
+registration and appointments through medical records, billing, pharmacy, laboratory,
+inventory, and analytics.
 
-The objective of the system is to improve operational efficiency, reduce manual paperwork, enhance patient experience, and provide secure, real-time healthcare data management.
+> **Project status:** Greenfield scaffold. This repository is being built out as a monorepo; the
+> top-level structure documented below reflects where each concern lives as the system is
+> implemented.
 
----
+## Business Objectives
 
-# Business Objectives
+- **Reduce manual paperwork and administrative overhead** across departments.
+- **Improve patient experience and operational efficiency** through automated, connected workflows.
+- **Provide centralized digital healthcare records** accessible to authorized roles.
+- **Enable real-time analytics and reporting** for clinical and operational decision-making.
+- **Ensure regulatory compliance and data security** for sensitive patient information.
 
-- Streamline hospital administration and operational workflows.
-- Improve patient care quality and accessibility.
-- Reduce manual data entry and paper-based processes.
-- Enable centralized electronic medical records.
-- Improve appointment and resource scheduling.
-- Automate billing, insurance, and reporting processes.
-- Ensure compliance with healthcare data security standards.
-- Support scalability for multi-branch hospital operations.
+## Technology Stack
 
----
+| Layer / Concern                  | Technology                                   |
+| -------------------------------- | -------------------------------------------- |
+| Frontend                         | React.js (single-page application)           |
+| Backend                          | Node.js with Express (modular microservices) |
+| Database                         | PostgreSQL                                   |
+| Caching                          | Redis                                        |
+| Cloud Platform                   | AWS                                          |
+| Containerization & Orchestration | Docker & Kubernetes                          |
+| CI/CD                            | GitHub Actions (Jenkins as an alternative)   |
+| Monitoring                       | Prometheus & Grafana                         |
+| Testing & Automation             | Playwright (UI), Postman/Newman (API)        |
 
-# Key Features
+## Architecture
 
-## Patient Management
-- Patient registration and profile creation
-- Electronic Medical Records (EMR)
-- Patient visit history tracking
-- Admission and discharge management
-- Emergency patient handling
-- Patient document uploads
+HMS follows a **modular microservices architecture** for scalability and maintainability. Client
+applications communicate through a single **API gateway** that routes requests to independently
+deployable services (authentication, patient registration, appointments, medical records, billing,
+pharmacy, laboratory, inventory, and reporting). Services persist data in **PostgreSQL** and use
+**Redis** for caching and asynchronous coordination.
 
-## Appointment Management
-- Doctor availability scheduling
-- Online appointment booking
-- Appointment reminders via SMS/email
-- Walk-in patient handling
-- Queue management
-
-## Doctor Management
-- Doctor profiles and specializations
-- Consultation scheduling
-- Prescription management
-- Doctor dashboards
-- Clinical notes management
-
-## Billing & Insurance
-- Invoice generation
-- Payment tracking
-- Insurance claims processing
-- GST/tax support
-- Refund handling
-- Revenue analytics
-
-## Laboratory Management
-- Test request management
-- Sample tracking
-- Lab result uploads
-- Digital report generation
-- Integration with diagnostic equipment
-
-## Pharmacy Management
-- Medicine inventory tracking
-- Prescription verification
-- Stock alerts and expiry notifications
-- Purchase order management
-- Pharmacy billing
-
-## Inventory Management
-- Medical equipment tracking
-- Consumables inventory
-- Supplier management
-- Procurement workflows
-
-## Reporting & Analytics
-- Revenue reports
-- Appointment analytics
-- Patient trends
-- Operational dashboards
-- Audit logs and compliance reports
-
-## Notifications & Alerts
-- Appointment reminders
-- Medicine refill alerts
-- Critical lab alerts
-- Administrative notifications
-
----
-
-# User Roles & Permissions
-
-| Role | Responsibilities |
-|------|------------------|
-| Administrator | Full system access, user management, reports |
-| Doctor | Patient consultation, prescriptions, clinical notes |
-| Nurse | Patient care workflows and ward management |
-| Receptionist | Registration and appointment handling |
-| Lab Technician | Lab test processing and reports |
-| Pharmacist | Prescription fulfillment and inventory |
-| Patient | Appointment booking and report access |
-| Insurance Coordinator | Claims and insurance processing |
-
----
-
-# System Architecture
-
-## Recommended Technology Stack
-
-### Frontend
-- React.js
-- TypeScript
-- Tailwind CSS
-
-### Backend
-- Node.js
-- Express.js
-- REST API architecture
-
-### Database
-- PostgreSQL
-- Redis for caching
-
-### DevOps & Infrastructure
-- Docker
-- Kubernetes
-- NGINX
-- AWS Cloud
-- GitHub Actions/Jenkins CI/CD
-
----
-
-# High-Level Architecture
-
-```text
-Client Applications
-(Web/Mobile)
-        |
-API Gateway / Load Balancer
-        |
-Backend Services Layer
-        |
----------------------------------
-| Patient Service              |
-| Appointment Service          |
-| Billing Service              |
-| Pharmacy Service             |
-| Laboratory Service           |
-| Notification Service         |
----------------------------------
-        |
-Database Layer (PostgreSQL)
-        |
-Monitoring & Logging
+```mermaid
+flowchart LR
+    Client["Client (React.js SPA)"] --> Gateway["API Gateway"]
+    Gateway --> Services["Microservices: Auth, Patient, Appointments, EMR, Billing, Pharmacy, Laboratory, Inventory, Reports"]
+    Services --> DB[("PostgreSQL")]
+    Services --> Cache[("Redis")]
 ```
 
----
+### Security
 
-# Security Architecture
+- **JWT-based authentication** with secure, role-based login.
+- **Role-based authorization (RBAC)** scoped to each user role.
+- **Multi-factor authentication (MFA)** for privileged users.
+- **Encrypted patient data storage** to protect sensitive records at rest.
+- **API gateway protection** as the single, guarded entry point to backend services.
+- **Session timeout** and **audit logging** for accountability and compliance.
 
-## Security Measures
-- Role-Based Access Control (RBAC)
-- JWT/OAuth2 authentication
-- Encrypted patient records
-- Secure API gateways
-- Audit logging
-- Multi-factor authentication for privileged users
-- HTTPS/TLS communication
+### Scalability
 
-## Compliance Considerations
-- Healthcare data privacy protection
-- Access monitoring
-- Backup and disaster recovery planning
-- Data retention policies
+- **Horizontal scaling** of services via Kubernetes.
+- **Database replication** for read scaling and availability.
+- **Load balancing** across API instances.
+- **Asynchronous job processing** for long-running and background work.
 
----
+## User Roles
 
-# Core Workflows
+HMS supports eight user roles:
 
-## Patient Registration Workflow
-1. Receptionist registers patient.
-2. Unique patient ID is generated.
-3. Patient documents are uploaded.
-4. Appointment is scheduled.
-5. Billing process is initiated.
+- Hospital Administrator
+- Doctor
+- Nurse
+- Receptionist
+- Lab Technician
+- Pharmacist
+- Patient
+- Insurance Coordinator
 
-## Appointment Booking Workflow
-1. Patient selects doctor and time slot.
-2. System validates doctor availability.
-3. Appointment confirmation is generated.
-4. Notification is sent to patient.
+## Core Modules
 
-## Laboratory Workflow
-1. Doctor requests lab tests.
-2. Sample collection is performed.
-3. Lab technician uploads results.
-4. Doctor reviews diagnostic reports.
+| Module                     | Description                                                                                           |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Patient Registration       | Create and update patient profiles, upload identification documents, and generate unique patient IDs. |
+| Appointment Scheduling     | Manage doctor calendars, enable online appointment booking, and send SMS/email reminders.             |
+| Electronic Medical Records | Maintain centralized digital healthcare records accessible across departments.                        |
+| Billing & Insurance        | Generate invoices, manage insurance claims, and support multiple payment methods.                     |
+| Pharmacy Management        | Track medicine inventory, manage prescriptions, and raise expiry alerts.                              |
+| Laboratory Management      | Manage laboratory reports and diagnostic results.                                                     |
+| Inventory Management       | Track hospital supplies and stock levels.                                                             |
+| Reports & Analytics        | Provide real-time analytics and reporting across the hospital.                                        |
 
-## Pharmacy Workflow
-1. Prescription is validated.
-2. Medicine stock is checked.
-3. Billing is generated.
-4. Medicines are dispensed.
+## Repository Structure
 
----
+The project is organized as a monorepo. The top-level layout being scaffolded:
 
-# Database Design Overview
-
-## Core Database Entities
-- Patients
-- Doctors
-- Appointments
-- Admissions
-- Prescriptions
-- Laboratory Reports
-- Pharmacy Inventory
-- Invoices
-- Payments
-- Departments
-
-## Relationship Highlights
-- One patient can have multiple appointments.
-- One doctor can manage multiple consultations.
-- Prescriptions are linked to appointments.
-- Bills are linked to consultations and admissions.
-
----
-
-# API Strategy
-
-## API Design Principles
-- RESTful architecture
-- Versioned APIs
-- Secure token-based authentication
-- Standardized response structures
-- Pagination and filtering support
-
-## Example Endpoints
-
-```http
-POST /api/v1/auth/login
-GET /api/v1/patients
-POST /api/v1/appointments
-GET /api/v1/billing/invoices
+```
+.
+├── frontend/                         # React.js single-page application (all roles & modules)
+├── backend/                          # Node.js/Express microservices + API gateway
+├── database/                         # PostgreSQL schema, migrations, seeds, ERD
+├── infrastructure/                   # Docker, Kubernetes, AWS IaC, monitoring (Prometheus/Grafana)
+├── tests/                            # E2E test automation (Playwright UI, Postman/Newman API)
+├── .github/                          # GitHub Actions CI/CD workflows
+├── Hospital_Management_Documentation_Package/  # Source specification PDFs
+├── docker-compose.yml                # Local dev orchestration (Postgres, Redis, services, frontend)
+├── package.json                      # Monorepo workspace root & orchestration scripts
+├── .env.example                      # Environment variable template
+├── .gitignore
+└── README.md
 ```
 
----
+Purpose of each top-level entry:
 
-# QA & Testing Strategy
+| Entry                                        | Purpose                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `frontend/`                                  | React.js single-page application serving all roles and modules.                            |
+| `backend/`                                   | Node.js/Express microservices and the API gateway.                                         |
+| `database/`                                  | PostgreSQL schema, migrations, seeds, and ERD artifacts.                                   |
+| `infrastructure/`                            | Docker, Kubernetes, AWS infrastructure-as-code, and monitoring (Prometheus/Grafana).       |
+| `tests/`                                     | End-to-end test automation (Playwright for UI, Postman/Newman for API).                    |
+| `.github/`                                   | GitHub Actions CI/CD workflow definitions.                                                 |
+| `Hospital_Management_Documentation_Package/` | Source specification PDFs (product, functional, architecture, database, QA).               |
+| `docker-compose.yml`                         | Local development orchestration for PostgreSQL, Redis, backend services, and the frontend. |
+| `package.json`                               | Monorepo workspace root and orchestration scripts.                                         |
+| `.env.example`                               | Environment variable template to copy into a local `.env`.                                 |
+| `.gitignore`                                 | Git ignore rules.                                                                          |
+| `README.md`                                  | This document — the project's top-level entry point.                                       |
 
-## Testing Layers
-- Unit Testing
-- Integration Testing
-- API Testing
-- UI Automation Testing
-- Performance Testing
-- Security Testing
-- User Acceptance Testing (UAT)
+## Getting Started
 
-## Automation Stack
-- Playwright
-- Cypress
-- Postman/Newman
-- Jest
-- GitHub Actions
+### Prerequisites
 
-## Quality Goals
-- High test coverage
-- Automated regression testing
-- Early defect detection
-- Performance benchmarking
+- **Node.js** (LTS; the workspace requires Node `>=20.20.2` and npm `>=9`)
+- **npm** (bundled with Node.js)
+- **Docker** & **Docker Compose**
+- _(Optional)_ **kubectl** for Kubernetes deployments
 
----
+### Local Development
 
-# DevOps & Deployment
+1. **Clone the repository:**
 
-## CI/CD Pipeline
-1. Code Commit
-2. Static Code Analysis
-3. Unit Test Execution
-4. Build & Package
-5. Docker Image Creation
-6. Deployment to Kubernetes
-7. Monitoring & Alerts
+   ```bash
+   git clone <repository-url>
+   cd Hospital-Management
+   ```
 
-## Monitoring Tools
-- Prometheus
-- Grafana
-- ELK Stack
-- CloudWatch
+2. **Create your environment file** from the template and fill in real secrets:
 
-## Deployment Models
-- Cloud Deployment
-- On-Premise Deployment
-- Hybrid Deployment
+   ```bash
+   cp .env.example .env
+   # then edit .env and set POSTGRES_PASSWORD, JWT_SECRET, DATA_ENCRYPTION_KEY, etc.
+   ```
 
----
+3. **Install root tooling** (linting, formatting, and workspace orchestration scripts):
 
-# AI Enhancement Opportunities
+   ```bash
+   npm install
+   ```
 
-## AI Features
-- AI appointment assistant
-- Smart patient triaging
-- OCR for prescriptions and reports
-- AI chatbot support
-- Predictive analytics for patient trends
-- Bed occupancy forecasting
-- Voice-to-text doctor notes
+4. **Start the local stack** — PostgreSQL, Redis, backend services, and the frontend:
 
----
+   ```bash
+   docker compose up
+   # or, using the workspace script (detached):
+   npm run docker:up
+   ```
 
-# Documentation Package
+5. **Run database migrations:**
 
-## Included Documents
+   ```bash
+   npm run db:migrate
+   ```
 
-```text
-/docs
- ├── 01_Hospital_Management_Product_Vision_and_Scope.pdf
- ├── 02_Hospital_Management_Functional_Requirements_Specification.pdf
- ├── 03_Hospital_Management_Technical_Architecture.pdf
- ├── 04_Hospital_Management_Database_Design_and_ERD.pdf
- └── 05_Hospital_Management_QA_Testing_and_DevOps_Strategy.pdf
-```
+6. **Access the application:**
+   - Frontend dev server: `http://localhost:3000`
+   - API gateway: `http://localhost:8080`
 
----
+> Detailed, component-specific setup instructions live in the README of each subfolder —
+> `frontend/`, `backend/`, `database/`, `infrastructure/`, and `tests/`.
 
-# Future Enhancements
+## Testing & CI/CD
 
-- Telemedicine integration
-- Mobile applications (Android/iOS)
-- AI-assisted diagnostics
-- Wearable health integrations
-- Multi-hospital SaaS architecture
-- Advanced analytics dashboards
-- Voice-enabled workflows
-- Real-time IoT device integrations
+HMS is validated through a layered testing strategy:
 
----
+- **Unit Testing** — individual functions and components.
+- **Integration Testing** — interactions between services and data stores.
+- **API Testing** — contract and behavior of service endpoints.
+- **Security Testing** — authentication, authorization, and data-protection checks.
+- **Performance Testing** — throughput and responsiveness under load.
+- **User Acceptance Testing** — end-to-end validation against business requirements.
 
-# Contribution Guidelines
+Automation and delivery:
 
-## Development Standards
-- Follow clean architecture principles.
-- Maintain modular code structure.
-- Use linting and formatting standards.
-- Write automated tests for all major modules.
+- **UI automation** with **Playwright**.
+- **API automation** with **Postman/Newman**.
+- **Continuous integration** via **GitHub Actions** (with **Jenkins** as an alternative), covering
+  automated build and deployment, Docker image creation, Kubernetes deployment, and monitoring
+  through **Prometheus** and **Grafana**.
 
-## Git Workflow
-- Feature branching strategy
-- Pull request reviews
-- Code quality checks
-- CI validation before merge
+## Documentation
 
----
+The authoritative product and engineering specifications live in
+[`Hospital_Management_Documentation_Package/`](Hospital_Management_Documentation_Package/):
 
-# License
+- `01_Hospital_Management_Product_Vision_and_Scope.pdf` — vision, business objectives, user roles, and core modules.
+- `02_Hospital_Management_Functional_Requirements_Specification.pdf` — functional requirements.
+- `03_Hospital_Management_Technical_Architecture.pdf` — technology stack and architecture.
+- `04_Hospital_Management_Database_Design_and_ERD.pdf` — key entities, relationships, and the ERD.
+- `05_Hospital_Management_QA_Testing_and_DevOps_Strategy.pdf` — QA, testing, and DevOps strategy.
 
-This project documentation is intended for educational, enterprise planning, and software architecture purposes.
+## License
 
----
-
-# Support
-
-For implementation support, architecture consultation, testing strategy planning, or deployment guidance, extend the documentation package with additional technical specifications and implementation artifacts.
-
+TBD — no `LICENSE` file is currently present in the repository (the project is marked private / `UNLICENSED`).

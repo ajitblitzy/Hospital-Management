@@ -1,0 +1,5 @@
+# Hospital Management System (HMS)
+# Authenticated internal application handling sensitive patient data.
+# Disallow all web crawlers/indexers from every path.
+User-agent: *
+Disallow: /

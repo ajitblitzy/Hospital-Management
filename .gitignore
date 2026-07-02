@@ -1,23 +1,50 @@
-# ---------------------------------------------------------------------------
-# Hospital Management System (HMS) monorepo .gitignore
-# Stack: Node.js + React (Vite) + Docker + Kubernetes
-# NOTE: lockfiles (package-lock.json) are intentionally KEPT (tracked).
-# ---------------------------------------------------------------------------
+# =============================================================================
+# Hospital Management System (HMS) - monorepo root .gitignore
+# -----------------------------------------------------------------------------
+# Stack: React.js (Vite) frontend | Node.js/Express backend microservices |
+#        PostgreSQL | Redis | AWS | Docker & Kubernetes.
+# Layout: npm workspaces -> frontend/, backend/*, backend/services/*, tests/*.
+#
+# Conventions:
+#   * Grouped under readable "# ---- <Section> ----" headers.
+#   * Patterns without a leading slash match at ANY depth (covers every
+#     workspace, e.g. node_modules/, dist/, coverage/ in each package).
+#   * Intentionally TRACKED files are listed at the bottom for clarity.
+#   * NOTE: lockfiles (package-lock.json) are intentionally KEPT (tracked) so
+#     installs are reproducible across the whole workspace.
+# =============================================================================
 
-# ---- Node ----
+# ---- Node / npm / Yarn / pnpm ----
 node_modules/
+.npm
+.node_repl_history
+.yarn-integrity
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+lerna-debug.log*
+# Node process / runtime artifacts
+*.pid
+*.seed
+*.pid.lock
+# Node diagnostic reports (process.report / --report-on-fatalerror)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # ---- Environment & secrets ----
+# Never commit real environment files or private keys / certificates.
 .env
 .env.local
 .env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.pem
 *.key
-# Keep the committed template
+*.p12
+*.pfx
+*.p8
+# Keep the committed template tracked (it holds only placeholder values).
 !.env.example
 
 # ---- Build outputs ----
@@ -25,6 +52,7 @@ dist/
 build/
 out/
 .next/
+# TypeScript incremental build metadata
 *.tsbuildinfo
 
 # ---- Frontend (React / Vite) ----
@@ -32,12 +60,18 @@ frontend/build/
 frontend/dist/
 .cache/
 .vite/
+dist-ssr/
+.parcel-cache/
 
-# ---- Testing / automation ----
+# ---- Testing / automation / coverage ----
 coverage/
-playwright-report/
-test-results/
+*.lcov
 .nyc_output/
+playwright-report/
+blob-report/
+playwright/.cache/
+test-results/
+# Newman (Postman CLI) run output
 newman/
 
 # ---- Logs & temp ----
@@ -45,20 +79,63 @@ logs/
 *.log
 tmp/
 temp/
+*.tmp
+*.bak
 
-# ---- Editor / OS ----
-.vscode/
+# ---- Editor / IDE ----
+# Ignore local editor config but keep shared, team-wide VS Code settings.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/*.code-snippets
 .idea/
-.DS_Store
-Thumbs.db
+*.sublime-workspace
+*.sublime-project
+# Vim / Emacs swap & backup files
 *.swp
+*.swo
+*.swn
+*~
 
-# ---- Docker / K8s local data ----
+# ---- OS-generated files ----
+.DS_Store
+.DS_Store?
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---- Docker / Kubernetes / infrastructure (local only) ----
+# Local compose overrides and any *.local.{yml,yaml} manifests are developer-
+# specific and must not be committed. Production K8s manifests under
+# infrastructure/ ARE tracked - only their local .data/ dirs are ignored.
 *.local.yml
+*.local.yaml
+docker-compose.override.yml
+docker-compose.override.yaml
+kubeconfig
+*.kubeconfig
 infrastructure/**/.data/
+# Local database / cache volume mounts (see docker-compose.yml volumes)
 pgdata/
 redisdata/
 
-# ---- Misc ----
+# ---- Misc tooling caches ----
 .turbo/
 .eslintcache
+.stylelintcache
+
+# =============================================================================
+# Intentionally TRACKED (do NOT ignore) - listed here for reviewer clarity:
+#   package.json, package-lock.json, all workspace manifests
+#   .env.example (committed template, un-ignored above)
+#   docker-compose.yml
+#   infrastructure/ Kubernetes manifests (only local .data/ dirs are ignored)
+#   Hospital_Management_Documentation_Package/ (docs) and all source code
+# =============================================================================

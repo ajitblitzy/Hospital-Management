@@ -1,0 +1,73 @@
+# =============================================================================
+# .dockerignore - backend/auth-service (Hospital Management System)
+# -----------------------------------------------------------------------------
+# Purpose: keep the Docker build context lean and secure. Everything listed
+# here is excluded from the context sent to the daemon, so it can never be
+# COPYed into the image. This trims image size and build time and, critically,
+# prevents host secrets and local installs from being baked into a layer.
+#
+# Build-context note: the auth-service Dockerfile is designed for a
+# REPOSITORY-ROOT build context (so the npm workspace root and backend/shared
+# are available for `npm ci`). Docker reads the .dockerignore at the ROOT of
+# the build context, so the canonical excludes ideally also live at the repo
+# root. This service-level file is still provided because it is the standard
+# companion convention, it is honored by BuildKit's per-Dockerfile ignore
+# (Dockerfile.dockerignore) and for any service-context build, and it documents
+# intent. Patterns are kept generic and path-relative so they stay meaningful
+# regardless of which directory is the context root.
+#
+# Ordering matters: like .gitignore, a later pattern overrides an earlier one,
+# so a negation such as `!.env.example` MUST appear after the `.env.*` rule
+# that would otherwise exclude it. Do NOT add patterns that would exclude
+# `package.json`, `package-lock.json`, or `src/`; they are required to build
+# and run the service. Runtime configuration is injected via the container
+# environment, never a baked-in file.
+# =============================================================================
+
+# ---- Dependencies (installed inside the image via `npm ci`, never copied) ----
+node_modules/
+**/node_modules/
+
+# ---- Environment & secrets (NEVER bake secrets into an image) ----
+.env
+.env.*
+# Keep the committed, secret-free template (re-included after the .env.* rule).
+!.env.example
+*.pem
+*.key
+
+# ---- Tests & coverage (not needed at runtime) ----
+tests/
+**/tests/
+coverage/
+**/coverage/
+.nyc_output/
+
+# ---- Logs & temp ----
+*.log
+npm-debug.log*
+logs/
+tmp/
+temp/
+
+# ---- VCS & CI ----
+.git/
+.gitignore
+.github/
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# ---- Docker meta (build files do not belong inside the context/image) ----
+Dockerfile
+**/Dockerfile
+.dockerignore
+**/.dockerignore
+
+# ---- Docs (optional; keep the image small) ----
+*.md
+**/*.md
