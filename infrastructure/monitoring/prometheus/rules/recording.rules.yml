@@ -1,0 +1,31 @@
+# HMS Prometheus recording rules
+# ---------------------------------------------------------------------------
+# Reusable per-service expressions consumed by alert.rules.yml. Isolating the
+# raw metric names here keeps the alert expressions readable and stable: if the
+# app's prom-client / Express instrumentation exposes slightly different metric
+# or label names (e.g. `status` instead of `status_code`, or a different
+# histogram name), only THIS file needs adjusting and the alerts keep working.
+#
+# Metric-name assumptions (from the HMS Node.js/Express services' prom-client
+# middleware; adjust here if the instrumentation differs):
+#   * http_requests_total                    counter, labels include status_code
+#   * http_request_duration_seconds_bucket   histogram buckets (le label)
+# Loaded via prometheus.yml / prometheus.dev.yml rule_files: [/etc/prometheus/rules/*.yml].
+groups:
+  - name: hms-http-recording
+    rules:
+      # Total request rate per service over 5m.
+      - record: service:http_requests:rate5m
+        expr: sum by (service) (rate(http_requests_total[5m]))
+
+      # 5xx (server error) request rate per service over 5m.
+      - record: service:http_requests_errors:rate5m
+        expr: sum by (service) (rate(http_requests_total{status_code=~"5.."}[5m]))
+
+      # Error ratio = 5xx rate / total rate, per service.
+      - record: service:http_error_ratio:ratio5m
+        expr: service:http_requests_errors:rate5m / service:http_requests:rate5m
+
+      # p95 request latency (seconds) per service from histogram buckets.
+      - record: service:http_request_duration_seconds:p95
+        expr: histogram_quantile(0.95, sum by (le, service) (rate(http_request_duration_seconds_bucket[5m])))

@@ -1,0 +1,44 @@
+# ==============================================================================
+# HMS Monitoring-Stack Namespace
+# ------------------------------------------------------------------------------
+# Dedicated namespace for the Hospital Management System (HMS) observability
+# stack: Prometheus (metrics scraping + alert rules), Grafana (dashboards), and
+# Alertmanager (alert routing). Every other manifest in this directory
+# (infrastructure/monitoring/kubernetes/) is scoped to this namespace by setting
+# metadata.namespace: monitoring.
+#
+# Apply this manifest FIRST so the namespace exists before the namespaced
+# monitoring resources are created:
+#
+#   kubectl apply -f infrastructure/monitoring/kubernetes/namespace.yaml
+#
+# This "monitoring" namespace is intentionally SEPARATE from the "hms"
+# application namespace (created by ../../kubernetes/namespace.yaml). Prometheus
+# runs here in "monitoring" and discovers application targets in "hms" via
+# cluster-scoped RBAC (see prometheus-rbac.yaml); the two namespaces stay
+# distinct for blast-radius isolation and least-privilege scoping.
+#
+# The namespace name is literally "monitoring" and must NOT be prefixed or
+# suffixed, because sibling manifests reference it by that exact value.
+#
+# NOTE: `kubectl apply -f infrastructure/monitoring/kubernetes/` does not
+# guarantee that this Namespace is created before the other namespaced manifests
+# in the directory (files are applied in filename order). If a first apply
+# reports "namespace not found" for other resources, simply re-run the apply
+# (kubectl apply is idempotent and converges), or apply this file first:
+# `kubectl apply -f namespace.yaml`.
+# ==============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    # Kubernetes recommended common labels, applied consistently across every
+    # monitoring resource so tooling can identify and group the stack.
+    app.kubernetes.io/name: monitoring
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/managed-by: kubectl
+    # Plain "name" label so NetworkPolicy namespaceSelectors can select this
+    # namespace via matchLabels: { name: monitoring }.
+    name: monitoring

@@ -1,0 +1,111 @@
+[
+  {
+    "prescription_number": "RX-000001",
+    "patient_number": "PAT-000001",
+    "doctor_employee_code": "DOC-0002",
+    "appointment_number": "APT-000001",
+    "issued_at": "2025-02-03T09:30:00Z",
+    "status": "active",
+    "notes": "Monitor blood pressure weekly.",
+    "items": [
+      {
+        "medicine_sku": "MED-AMLO-5",
+        "medicine_name": "Amlodipine 5mg",
+        "dosage": "5 mg",
+        "frequency": "once daily",
+        "duration_days": 30,
+        "quantity": 30,
+        "instructions": "Take in the morning."
+      }
+    ]
+  },
+  {
+    "prescription_number": "RX-000002",
+    "patient_number": "PAT-000002",
+    "doctor_employee_code": "DOC-0001",
+    "appointment_number": "APT-000002",
+    "issued_at": "2025-02-04T10:50:00Z",
+    "status": "dispensed",
+    "notes": "Return if fever persists beyond 3 days.",
+    "items": [
+      {
+        "medicine_sku": "MED-PARA-500",
+        "medicine_name": "Paracetamol 500mg",
+        "dosage": "500 mg",
+        "frequency": "every 6 hours as needed",
+        "duration_days": 5,
+        "quantity": 20,
+        "instructions": "Take after meals."
+      },
+      {
+        "medicine_sku": "MED-IBU-400",
+        "medicine_name": "Ibuprofen 400mg",
+        "dosage": "400 mg",
+        "frequency": "twice daily",
+        "duration_days": 5,
+        "quantity": 10,
+        "instructions": "Take with food."
+      }
+    ]
+  },
+  {
+    "prescription_number": "RX-000003",
+    "patient_number": "PAT-000004",
+    "doctor_employee_code": "DOC-0004",
+    "appointment_number": "APT-000003",
+    "issued_at": "2025-02-05T11:20:00Z",
+    "status": "active",
+    "notes": "Pediatric antihistamine.",
+    "items": [
+      {
+        "medicine_sku": "MED-CETI-10",
+        "medicine_name": "Cetirizine 10mg",
+        "dosage": "10 mg",
+        "frequency": "once daily",
+        "duration_days": 14,
+        "quantity": 14,
+        "instructions": "Take at night."
+      }
+    ]
+  },
+  {
+    "prescription_number": "RX-000004",
+    "patient_number": "PAT-000005",
+    "doctor_employee_code": "DOC-0006",
+    "appointment_number": "APT-000004",
+    "issued_at": "2025-02-06T15:00:00Z",
+    "status": "dispensed",
+    "notes": "Post-operative antibiotics.",
+    "items": [
+      {
+        "medicine_sku": "MED-AMOX-250",
+        "medicine_name": "Amoxicillin 250mg",
+        "dosage": "250 mg",
+        "frequency": "three times daily",
+        "duration_days": 7,
+        "quantity": 21,
+        "instructions": "Complete the full course."
+      }
+    ]
+  },
+  {
+    "prescription_number": "RX-000005",
+    "patient_number": "PAT-000006",
+    "doctor_employee_code": "DOC-0001",
+    "appointment_number": null,
+    "issued_at": "2025-02-12T13:00:00Z",
+    "status": "active",
+    "notes": "Manage type 2 diabetes.",
+    "items": [
+      {
+        "medicine_sku": "MED-METF-500",
+        "medicine_name": "Metformin 500mg",
+        "dosage": "500 mg",
+        "frequency": "twice daily",
+        "duration_days": 30,
+        "quantity": 60,
+        "instructions": "Take with breakfast and dinner."
+      }
+    ]
+  }
+]

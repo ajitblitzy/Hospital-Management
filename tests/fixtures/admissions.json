@@ -1,0 +1,50 @@
+[
+  {
+    "admission_number": "ADM-000001",
+    "patient_number": "PAT-000003",
+    "department_name": "Orthopedics",
+    "attending_doctor_employee_code": "DOC-0005",
+    "admitted_at": "2025-01-20T07:30:00Z",
+    "discharged_at": "2025-01-23T11:00:00Z",
+    "ward": "Orthopedic Ward",
+    "bed_number": "OW-12",
+    "reason": "Total knee replacement surgery",
+    "status": "discharged"
+  },
+  {
+    "admission_number": "ADM-000002",
+    "patient_number": "PAT-000005",
+    "department_name": "Emergency",
+    "attending_doctor_employee_code": "DOC-0006",
+    "admitted_at": "2025-02-01T18:45:00Z",
+    "discharged_at": "2025-02-03T10:15:00Z",
+    "ward": "Emergency Ward",
+    "bed_number": "EW-05",
+    "reason": "Acute appendicitis",
+    "status": "discharged"
+  },
+  {
+    "admission_number": "ADM-000003",
+    "patient_number": "PAT-000001",
+    "department_name": "Cardiology",
+    "attending_doctor_employee_code": "DOC-0002",
+    "admitted_at": "2025-02-10T09:00:00Z",
+    "discharged_at": null,
+    "ward": "Cardiac Care Unit",
+    "bed_number": "CCU-03",
+    "reason": "Chest pain observation",
+    "status": "admitted"
+  },
+  {
+    "admission_number": "ADM-000004",
+    "patient_number": "PAT-000006",
+    "department_name": "General Medicine",
+    "attending_doctor_employee_code": "DOC-0001",
+    "admitted_at": "2025-02-12T12:20:00Z",
+    "discharged_at": null,
+    "ward": "General Ward",
+    "bed_number": "GW-21",
+    "reason": "Community-acquired pneumonia",
+    "status": "admitted"
+  }
+]

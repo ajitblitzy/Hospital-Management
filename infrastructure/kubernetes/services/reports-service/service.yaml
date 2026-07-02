@@ -1,0 +1,25 @@
+# HMS Reports & Analytics service (reports-service) — Service.
+# Stable in-cluster ClusterIP endpoint. The api-gateway routes /api/reports to this
+# Service (reports-service:4009) and load-balances across the Deployment's pods
+# ("Load balancing for APIs" — 03_Hospital_Management_Technical_Architecture.pdf).
+# In-cluster DNS: reports-service.hms.svc.cluster.local:4009.
+apiVersion: v1
+kind: Service
+metadata:
+  name: reports-service
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: reports-service
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: reports-service
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  type: ClusterIP
+  # Selector matches the Deployment's pod template identity label (deployment.yaml).
+  selector:
+    app.kubernetes.io/name: reports-service
+  ports:
+    - name: http
+      port: 4009
+      targetPort: 4009
+      protocol: TCP

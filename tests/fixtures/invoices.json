@@ -1,0 +1,215 @@
+[
+  {
+    "invoice_number": "INV-000001",
+    "patient_number": "PAT-000001",
+    "appointment_number": "APT-000001",
+    "admission_number": null,
+    "issued_at": "2025-02-03T10:00:00Z",
+    "due_date": "2025-02-17",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Cardiology consultation",
+        "quantity": 1,
+        "unit_price": 220,
+        "amount": 220
+      },
+      {
+        "description": "ECG test",
+        "quantity": 1,
+        "unit_price": 80,
+        "amount": 80
+      }
+    ],
+    "subtotal": 300,
+    "tax": 30,
+    "discount": 0,
+    "total": 330,
+    "amount_paid": 330,
+    "balance_due": 0,
+    "status": "paid",
+    "payment_method": "card",
+    "insurance_claim": null
+  },
+  {
+    "invoice_number": "INV-000002",
+    "patient_number": "PAT-000003",
+    "appointment_number": null,
+    "admission_number": "ADM-000001",
+    "issued_at": "2025-01-23T12:00:00Z",
+    "due_date": "2025-02-06",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Ward charges (3 days)",
+        "quantity": 3,
+        "unit_price": 400,
+        "amount": 1200
+      },
+      {
+        "description": "Orthopedic surgery",
+        "quantity": 1,
+        "unit_price": 2500,
+        "amount": 2500
+      },
+      {
+        "description": "Inpatient medication",
+        "quantity": 1,
+        "unit_price": 150,
+        "amount": 150
+      }
+    ],
+    "subtotal": 3850,
+    "tax": 385,
+    "discount": 100,
+    "total": 4135,
+    "amount_paid": 2000,
+    "balance_due": 2135,
+    "status": "partially_paid",
+    "payment_method": "insurance",
+    "insurance_claim": {
+      "claim_number": "CLM-000001",
+      "provider": "Acme Health",
+      "policy_number": "AH-POL-1003",
+      "claimed_amount": 4135,
+      "approved_amount": 3000,
+      "status": "approved"
+    }
+  },
+  {
+    "invoice_number": "INV-000003",
+    "patient_number": "PAT-000002",
+    "appointment_number": "APT-000002",
+    "admission_number": null,
+    "issued_at": "2025-02-04T11:00:00Z",
+    "due_date": "2025-02-18",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "General medicine consultation",
+        "quantity": 1,
+        "unit_price": 150,
+        "amount": 150
+      }
+    ],
+    "subtotal": 150,
+    "tax": 15,
+    "discount": 0,
+    "total": 165,
+    "amount_paid": 0,
+    "balance_due": 165,
+    "status": "pending",
+    "payment_method": null,
+    "insurance_claim": null
+  },
+  {
+    "invoice_number": "INV-000004",
+    "patient_number": "PAT-000004",
+    "appointment_number": "APT-000003",
+    "admission_number": null,
+    "issued_at": "2025-02-05T11:30:00Z",
+    "due_date": "2025-02-19",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Pediatric consultation",
+        "quantity": 1,
+        "unit_price": 150,
+        "amount": 150
+      },
+      {
+        "description": "Vaccination dose",
+        "quantity": 2,
+        "unit_price": 45,
+        "amount": 90
+      }
+    ],
+    "subtotal": 240,
+    "tax": 24,
+    "discount": 0,
+    "total": 264,
+    "amount_paid": 264,
+    "balance_due": 0,
+    "status": "paid",
+    "payment_method": "cash",
+    "insurance_claim": null
+  },
+  {
+    "invoice_number": "INV-000005",
+    "patient_number": "PAT-000005",
+    "appointment_number": null,
+    "admission_number": "ADM-000002",
+    "issued_at": "2025-02-03T11:00:00Z",
+    "due_date": "2025-02-17",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Ward charges (2 days)",
+        "quantity": 2,
+        "unit_price": 400,
+        "amount": 800
+      },
+      {
+        "description": "Emergency appendectomy",
+        "quantity": 1,
+        "unit_price": 600,
+        "amount": 600
+      }
+    ],
+    "subtotal": 1400,
+    "tax": 140,
+    "discount": 0,
+    "total": 1540,
+    "amount_paid": 1540,
+    "balance_due": 0,
+    "status": "paid",
+    "payment_method": "insurance",
+    "insurance_claim": {
+      "claim_number": "CLM-000002",
+      "provider": "Acme Health",
+      "policy_number": "AH-POL-1005",
+      "claimed_amount": 1540,
+      "approved_amount": 1540,
+      "status": "approved"
+    }
+  },
+  {
+    "invoice_number": "INV-000006",
+    "patient_number": "PAT-000006",
+    "appointment_number": "APT-000005",
+    "admission_number": null,
+    "issued_at": "2025-02-07T16:00:00Z",
+    "due_date": "2025-02-21",
+    "currency": "USD",
+    "line_items": [
+      {
+        "description": "Orthopedic consultation",
+        "quantity": 1,
+        "unit_price": 180,
+        "amount": 180
+      },
+      {
+        "description": "Knee X-ray",
+        "quantity": 1,
+        "unit_price": 120,
+        "amount": 120
+      }
+    ],
+    "subtotal": 300,
+    "tax": 30,
+    "discount": 30,
+    "total": 300,
+    "amount_paid": 150,
+    "balance_due": 150,
+    "status": "partially_paid",
+    "payment_method": "card",
+    "insurance_claim": {
+      "claim_number": "CLM-000003",
+      "provider": "BlueCare",
+      "policy_number": "BC-POL-1006",
+      "claimed_amount": 300,
+      "approved_amount": 150,
+      "status": "pending"
+    }
+  }
+]

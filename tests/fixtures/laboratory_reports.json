@@ -1,0 +1,97 @@
+[
+  {
+    "report_number": "LAB-000001",
+    "patient_number": "PAT-000001",
+    "ordering_doctor_employee_code": "DOC-0002",
+    "panel_name": "Lipid Panel",
+    "specimen_type": "blood",
+    "collected_at": "2025-02-03T09:45:00Z",
+    "reported_at": "2025-02-03T15:00:00Z",
+    "status": "completed",
+    "results": [
+      {
+        "analyte": "total_cholesterol",
+        "value": 205,
+        "unit": "mg/dL",
+        "reference_range": "<200",
+        "flag": "high"
+      },
+      {
+        "analyte": "hdl_cholesterol",
+        "value": 55,
+        "unit": "mg/dL",
+        "reference_range": ">40",
+        "flag": "normal"
+      },
+      {
+        "analyte": "ldl_cholesterol",
+        "value": 130,
+        "unit": "mg/dL",
+        "reference_range": "<130",
+        "flag": "normal"
+      },
+      {
+        "analyte": "triglycerides",
+        "value": 150,
+        "unit": "mg/dL",
+        "reference_range": "<150",
+        "flag": "normal"
+      }
+    ]
+  },
+  {
+    "report_number": "LAB-000002",
+    "patient_number": "PAT-000002",
+    "ordering_doctor_employee_code": "DOC-0001",
+    "panel_name": "Complete Blood Count",
+    "specimen_type": "blood",
+    "collected_at": "2025-02-04T10:55:00Z",
+    "reported_at": "2025-02-04T14:30:00Z",
+    "status": "completed",
+    "results": [
+      {
+        "analyte": "hemoglobin",
+        "value": 13.5,
+        "unit": "g/dL",
+        "reference_range": "12.0-15.5",
+        "flag": "normal"
+      },
+      {
+        "analyte": "white_blood_cells",
+        "value": 11.2,
+        "unit": "10^3/uL",
+        "reference_range": "4.0-11.0",
+        "flag": "high"
+      },
+      {
+        "analyte": "platelets",
+        "value": 250,
+        "unit": "10^3/uL",
+        "reference_range": "150-400",
+        "flag": "normal"
+      }
+    ]
+  },
+  {
+    "report_number": "LAB-000003",
+    "patient_number": "PAT-000005",
+    "ordering_doctor_employee_code": "DOC-0006",
+    "panel_name": "Basic Metabolic Panel",
+    "specimen_type": "blood",
+    "collected_at": "2025-02-06T14:20:00Z",
+    "reported_at": null,
+    "status": "in_progress",
+    "results": []
+  },
+  {
+    "report_number": "LAB-000004",
+    "patient_number": "PAT-000003",
+    "ordering_doctor_employee_code": "DOC-0005",
+    "panel_name": "Urinalysis",
+    "specimen_type": "urine",
+    "collected_at": "2025-01-20T08:00:00Z",
+    "reported_at": null,
+    "status": "ordered",
+    "results": []
+  }
+]

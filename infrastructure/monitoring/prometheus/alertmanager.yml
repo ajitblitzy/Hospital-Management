@@ -1,0 +1,113 @@
+# =============================================================================
+# HMS Alertmanager configuration — PLACEHOLDER receivers only. No real secrets/URLs.
+# -----------------------------------------------------------------------------
+# Real receiver endpoints (Slack / PagerDuty / email / webhook URLs, tokens,
+# passwords, and API keys) are injected at DEPLOY TIME via environment variables
+# or a Kubernetes Secret by the monitoring ../kubernetes/ stack (the Alertmanager
+# pod runs in the "monitoring" namespace). Do NOT commit real webhook URLs or
+# tokens to this repository — this file is version-controlled and MUST remain
+# secret-free.
+#
+# Routing contract:
+#   Alerts are routed on the labels emitted by the Prometheus alert rules in
+#   rules/alert.rules.yml — primarily:
+#     * severity : "warning" | "critical"
+#     * service  : the HMS microservice that owns the alert
+#
+# Validation:
+#   Structurally compatible with `amtool check-config alertmanager.yml`.
+#   2-space indentation, no tabs.
+# =============================================================================
+
+global:
+  # How long to wait after an alert stops firing before Alertmanager declares it
+  # resolved and sends a resolution notification. Applies to every receiver
+  # unless individually overridden.
+  resolve_timeout: 5m
+
+# -----------------------------------------------------------------------------
+# Routing tree
+# -----------------------------------------------------------------------------
+# The root route is the default / fallback path. Non-critical alerts fall through
+# to the "default-null" receiver (they are grouped and deduplicated but not
+# paged). Critical alerts additionally match the child route below and fan out to
+# the "critical-webhook" receiver.
+route:
+  receiver: "default-null"
+  # Collapse alerts that share the same alertname + owning service into a single
+  # notification to reduce noise.
+  group_by: ["alertname", "service"]
+  # Buffer alerts of a brand-new group for 30s before the first notification so
+  # related alerts can be batched together.
+  group_wait: 30s
+  # Wait 5m before notifying about new alerts added to a group that already had
+  # its initial notification sent.
+  group_interval: 5m
+  # Re-send a notification for an alert that is still firing every 4h.
+  repeat_interval: 4h
+  routes:
+    # Critical alerts are delivered to the critical webhook receiver.
+    # `continue: true` lets the alert keep matching sibling routes and the root
+    # receiver too, so nothing is silently dropped as the routing tree evolves.
+    - matchers:
+        - severity = "critical"
+      receiver: "critical-webhook"
+      continue: true
+
+# -----------------------------------------------------------------------------
+# Receivers (PLACEHOLDERS ONLY — no real endpoints, tokens, or credentials)
+# -----------------------------------------------------------------------------
+receivers:
+  # "null" receiver: it has no notification config, so matching alerts are
+  # grouped and deduplicated but intentionally NOT delivered anywhere. This is
+  # the safe default sink for warning / informational noise.
+  - name: "default-null"
+
+  # Critical alerts. The webhook URL below is an OBVIOUSLY-FAKE placeholder.
+  # At deploy time the ../kubernetes/ stack overrides it with the real endpoint
+  # sourced from a Kubernetes Secret (prefer the `url_file:` option pointing at a
+  # mounted secret file over an inline `url:` in production overlays).
+  - name: "critical-webhook"
+    webhook_configs:
+      # PLACEHOLDER ONLY — replace via env / K8s Secret at deploy time.
+      # Never commit a real URL here.
+      - url: "http://alert-webhook.example.com/placeholder"
+        send_resolved: true
+
+  # ---------------------------------------------------------------------------
+  # OPTIONAL EXTRA CHANNELS (illustrative, intentionally commented out).
+  # Enable by uncommenting AND wiring the credential at deploy time. Note the use
+  # of the *_file options so the secret is read from a mounted Kubernetes Secret
+  # file at runtime instead of being written into this committed config:
+  #
+  # - name: "critical-slack"
+  #   slack_configs:
+  #     - api_url_file: /etc/alertmanager/secrets/slack_api_url   # mounted from K8s Secret
+  #       channel: "#hms-critical-alerts"
+  #       send_resolved: true
+  #
+  # - name: "critical-pagerduty"
+  #   pagerduty_configs:
+  #     - routing_key_file: /etc/alertmanager/secrets/pagerduty_routing_key  # mounted from K8s Secret
+  #       send_resolved: true
+  #
+  # - name: "critical-email"
+  #   email_configs:
+  #     - to: "oncall@hms.example.com"
+  #       # SMTP host + auth are supplied via global.smtp_* and a K8s Secret,
+  #       # never inlined here.
+  #       send_resolved: true
+  # ---------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Inhibition rules
+# -----------------------------------------------------------------------------
+# Suppress lower-severity noise while a higher-severity incident for the SAME
+# alertname + service is already firing. This prevents a "warning" and a
+# "critical" alert for the same underlying problem from both notifying.
+inhibit_rules:
+  - source_matchers:
+      - severity = "critical"
+    target_matchers:
+      - severity = "warning"
+    equal: ["alertname", "service"]

@@ -1,0 +1,31 @@
+# Grafana datasource provisioning - Hospital Management System (HMS)
+# Registers Prometheus as Grafana's DEFAULT datasource so every provisioned
+# dashboard (../dashboards/) queries it automatically on startup.
+#
+# Grafana provisioning schema v1. Mounted by ../../kubernetes/ (via ConfigMap)
+# into the Grafana pod at /etc/grafana/provisioning/datasources/.
+# NO secrets committed here - Prometheus needs no auth in-cluster; Grafana admin
+# credentials are injected at deploy time via Kubernetes Secret/env.
+apiVersion: 1
+
+# Ensure a clean re-apply of the provisioned datasource on Grafana restart.
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus # stable UID so dashboard JSON can reference it
+    access: proxy # Grafana backend proxies queries to Prometheus
+    # In-cluster Prometheus Service DNS in the `monitoring` namespace, port 9090.
+    # NEVER use localhost inside the cluster.
+    # Co-located/dev alternative form: http://prometheus:9090
+    url: http://prometheus.monitoring.svc.cluster.local:9090
+    isDefault: true # Prometheus MUST be the default datasource
+    editable: false # provisioned datasource - do not hand-edit in the UI
+    orgId: 1
+    version: 1
+    jsonData:
+      httpMethod: POST # POST allows large/complex PromQL queries
+      timeInterval: 15s # aligns with Prometheus scrape_interval (15s)

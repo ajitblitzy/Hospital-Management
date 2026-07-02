@@ -1,0 +1,56 @@
+[
+  {
+    "name": "General Medicine",
+    "description": "Outpatient and inpatient general medical care.",
+    "location": "Block A, Floor 1",
+    "phone": "+1-555-0101"
+  },
+  {
+    "name": "Cardiology",
+    "description": "Diagnosis and treatment of heart and vascular conditions.",
+    "location": "Block A, Floor 2",
+    "phone": "+1-555-0102"
+  },
+  {
+    "name": "Radiology",
+    "description": "Medical imaging: X-ray, CT, MRI, and ultrasound.",
+    "location": "Block B, Floor 1",
+    "phone": "+1-555-0103"
+  },
+  {
+    "name": "Laboratory",
+    "description": "Clinical laboratory and diagnostic testing services.",
+    "location": "Block B, Floor 2",
+    "phone": "+1-555-0104"
+  },
+  {
+    "name": "Pharmacy",
+    "description": "Dispensing of medications and pharmacy inventory.",
+    "location": "Block C, Floor 1",
+    "phone": "+1-555-0105"
+  },
+  {
+    "name": "Emergency",
+    "description": "Emergency and urgent care, available 24/7.",
+    "location": "Block A, Ground",
+    "phone": "+1-555-0106"
+  },
+  {
+    "name": "Pediatrics",
+    "description": "Medical care for infants, children, and adolescents.",
+    "location": "Block D, Floor 1",
+    "phone": "+1-555-0107"
+  },
+  {
+    "name": "Orthopedics",
+    "description": "Musculoskeletal system: bones, joints, and surgery.",
+    "location": "Block D, Floor 2",
+    "phone": "+1-555-0108"
+  },
+  {
+    "name": "Administration",
+    "description": "Hospital administration and management offices.",
+    "location": "Block E, Floor 1",
+    "phone": "+1-555-0109"
+  }
+]

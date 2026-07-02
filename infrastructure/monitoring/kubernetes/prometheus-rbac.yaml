@@ -1,0 +1,81 @@
+# =============================================================================
+# RBAC for Prometheus service discovery.
+# -----------------------------------------------------------------------------
+# Prometheus runs in the `monitoring` namespace and uses `kubernetes_sd_configs`
+# (see ../prometheus/prometheus.yml, role: pod scoped to the `hms` namespace) to
+# discover and scrape the Hospital Management System (HMS) microservices running
+# in the `hms` namespace. Kubernetes service discovery requires read access to
+# the Kubernetes API (pods, endpoints, services, nodes, ...), granted below.
+#
+# Even though discovery is namespace-scoped to `hms`, the access is granted via a
+# cluster-scoped ClusterRole + ClusterRoleBinding. This is the standard Prometheus
+# discovery pattern: it lets Prometheus (in `monitoring`) watch workloads in `hms`
+# and read node-level metrics, which are inherently cluster-scoped.
+#
+# `prometheus-deployment.yaml` binds these permissions to Prometheus via
+# `spec.template.spec.serviceAccountName: prometheus`.
+#
+# Least privilege: only read verbs (get/list/watch) are granted here — never write.
+#
+# Grounded in doc 05 (QA/Testing & DevOps Strategy — "Monitoring using Prometheus
+# and Grafana"; "High availability requirements") and doc 03 (Technical
+# Architecture — Kubernetes microservices discovered by Prometheus).
+# =============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/managed-by: kubectl
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # Cluster-scoped resource: intentionally no `namespace` field.
+  name: prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: hospital-management-system
+rules:
+  # Core API group ("") — primary targets of kubernetes_sd_configs: pods,
+  # endpoints and services for scrape-target discovery; nodes (+ /proxy, /metrics)
+  # for kubelet / cAdvisor node and container metrics.
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/proxy", "nodes/metrics", "services", "endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+  # EndpointSlices — the scalable successor to Endpoints; required by the
+  # `endpointslice` service-discovery role on Kubernetes >= 1.21.
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+  # Ingresses — enables the `ingress` service-discovery role for HTTP/blackbox probing.
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch"]
+  # Non-resource endpoint — allows scraping the API server's own `/metrics`.
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  # Cluster-scoped resource: intentionally no `namespace` field.
+  name: prometheus
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: hospital-management-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  # The Prometheus ServiceAccount defined above, living in the `monitoring` namespace.
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: monitoring

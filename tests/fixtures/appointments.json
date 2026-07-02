@@ -1,0 +1,80 @@
+[
+  {
+    "appointment_number": "APT-000001",
+    "patient_number": "PAT-000001",
+    "doctor_employee_code": "DOC-0002",
+    "department_name": "Cardiology",
+    "scheduled_at": "2025-02-03T09:00:00Z",
+    "duration_minutes": 30,
+    "reason": "Routine cardiac checkup",
+    "status": "completed",
+    "booking_channel": "online",
+    "reminder_channel": "email",
+    "created_at": "2025-01-20T10:00:00Z"
+  },
+  {
+    "appointment_number": "APT-000002",
+    "patient_number": "PAT-000002",
+    "doctor_employee_code": "DOC-0001",
+    "department_name": "General Medicine",
+    "scheduled_at": "2025-02-04T10:30:00Z",
+    "duration_minutes": 20,
+    "reason": "Fever and persistent cough",
+    "status": "completed",
+    "booking_channel": "front_desk",
+    "reminder_channel": "sms",
+    "created_at": "2025-01-21T11:00:00Z"
+  },
+  {
+    "appointment_number": "APT-000003",
+    "patient_number": "PAT-000004",
+    "doctor_employee_code": "DOC-0004",
+    "department_name": "Pediatrics",
+    "scheduled_at": "2025-02-05T11:00:00Z",
+    "duration_minutes": 20,
+    "reason": "Childhood vaccination",
+    "status": "completed",
+    "booking_channel": "online",
+    "reminder_channel": "email",
+    "created_at": "2025-01-22T09:30:00Z"
+  },
+  {
+    "appointment_number": "APT-000004",
+    "patient_number": "PAT-000005",
+    "doctor_employee_code": "DOC-0006",
+    "department_name": "Emergency",
+    "scheduled_at": "2025-02-06T14:00:00Z",
+    "duration_minutes": 45,
+    "reason": "Acute abdominal pain",
+    "status": "completed",
+    "booking_channel": "front_desk",
+    "reminder_channel": "none",
+    "created_at": "2025-02-06T13:30:00Z"
+  },
+  {
+    "appointment_number": "APT-000005",
+    "patient_number": "PAT-000006",
+    "doctor_employee_code": "DOC-0005",
+    "department_name": "Orthopedics",
+    "scheduled_at": "2025-02-07T15:30:00Z",
+    "duration_minutes": 30,
+    "reason": "Knee pain follow-up",
+    "status": "scheduled",
+    "booking_channel": "online",
+    "reminder_channel": "sms",
+    "created_at": "2025-01-25T16:00:00Z"
+  },
+  {
+    "appointment_number": "APT-000006",
+    "patient_number": "PAT-000003",
+    "doctor_employee_code": "DOC-0002",
+    "department_name": "Cardiology",
+    "scheduled_at": "2025-02-10T08:30:00Z",
+    "duration_minutes": 30,
+    "reason": "Post-surgery cardiac review",
+    "status": "scheduled",
+    "booking_channel": "online",
+    "reminder_channel": "email",
+    "created_at": "2025-01-28T12:00:00Z"
+  }
+]
