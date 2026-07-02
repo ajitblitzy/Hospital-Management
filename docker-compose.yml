@@ -1,0 +1,130 @@
+# ===========================================================================
+# Hospital Management System (HMS) - LOCAL DEVELOPMENT orchestration.
+# One-command local environment (referenced by root package.json `docker:up`).
+#
+# NOTE: The `version:` top-level key is intentionally omitted per the current
+# Compose specification.
+#
+# NOTE: The application service build contexts (./backend/*, ./frontend) depend
+# on Dockerfiles authored by the backend/ and frontend/ agents. Until those
+# exist, only the backing services (postgres, redis) can be started
+# (`docker compose up -d postgres redis`).
+#
+# NOTE: Production deployment uses Kubernetes manifests under infrastructure/;
+# do NOT place production secrets here. All values come from `.env` via ${VAR}.
+#
+# NOTE: Inside this compose network, service hostnames are the service names
+# (e.g. `postgres`, `redis`, `api-gateway`) - NOT `localhost`.
+# ===========================================================================
+
+services:
+  # ---- Backing services -------------------------------------------------
+  postgres:
+    image: postgres:16
+    container_name: hms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hms-network
+
+  redis:
+    image: redis:7
+    container_name: hms-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hms-network
+
+  # ---- Application services --------------------------------------------
+  # Build contexts reference folders authored by the backend/ agents.
+  # Additional microservices (emr, pharmacy, laboratory, billing, inventory,
+  # reports) follow the exact same pattern as the services below.
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+    container_name: hms-api-gateway
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${API_GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hms-network
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+    container_name: hms-auth-service
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${AUTH_SERVICE_PORT:-4001}:4001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hms-network
+
+  patient-service:
+    build:
+      context: ./backend/patient-service
+    container_name: hms-patient-service
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${PATIENT_SERVICE_PORT:-4002}:4002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hms-network
+
+  # ---- Frontend ---------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+    container_name: hms-frontend
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - hms-network
+
+networks:
+  hms-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,35 @@
+{
+  "name": "hospital-management-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hospital Management System (HMS) monorepo workspace root. Orchestrates the React frontend and the Node.js/Express backend microservices and provides shared developer tooling. This is a private npm workspace root and intentionally contains NO application/runtime dependencies (those live in each frontend/backend workspace).",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "frontend",
+    "backend/*",
+    "backend/services/*"
+  ],
+  "engines": {
+    "node": ">=20.20.2",
+    "npm": ">=9"
+  },
+  "scripts": {
+    "dev": "concurrently -n frontend,backend -c blue,green \"npm run dev --workspace frontend --if-present\" \"npm run dev --workspaces --if-present\"",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md,yml,yaml}\"",
+    "db:migrate": "npm run migrate --workspaces --if-present",
+    "db:seed": "npm run seed --workspaces --if-present",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "eslint": "^8.57.1",
+    "prettier": "^3.3.3",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10"
+  }
+}

@@ -1,0 +1,64 @@
+# ---------------------------------------------------------------------------
+# Hospital Management System (HMS) monorepo .gitignore
+# Stack: Node.js + React (Vite) + Docker + Kubernetes
+# NOTE: lockfiles (package-lock.json) are intentionally KEPT (tracked).
+# ---------------------------------------------------------------------------
+
+# ---- Node ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---- Environment & secrets ----
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+# Keep the committed template
+!.env.example
+
+# ---- Build outputs ----
+dist/
+build/
+out/
+.next/
+*.tsbuildinfo
+
+# ---- Frontend (React / Vite) ----
+frontend/build/
+frontend/dist/
+.cache/
+.vite/
+
+# ---- Testing / automation ----
+coverage/
+playwright-report/
+test-results/
+.nyc_output/
+newman/
+
+# ---- Logs & temp ----
+logs/
+*.log
+tmp/
+temp/
+
+# ---- Editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# ---- Docker / K8s local data ----
+*.local.yml
+infrastructure/**/.data/
+pgdata/
+redisdata/
+
+# ---- Misc ----
+.turbo/
+.eslintcache
