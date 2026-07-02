@@ -1,0 +1,42 @@
+{
+  "name": "@hms/reports-service",
+  "version": "0.1.0",
+  "description": "HMS Reports & Analytics microservice — read-only cross-module aggregation with Redis-backed asynchronous report generation and caching.",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18",
+    "npm": ">=9"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "start:worker": "node src/worker.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "@hms/shared": "*",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/index.js",
+      "!src/worker.js"
+    ],
+    "coverageDirectory": "coverage",
+    "clearMocks": true,
+    "verbose": true
+  }
+}

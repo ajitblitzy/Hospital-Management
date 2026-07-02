@@ -1,0 +1,32 @@
+{
+  "name": "@hms/api-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API Gateway for the Hospital Management System — single entry point that reverse-proxies to backend microservices and enforces JWT authentication, RBAC, rate limiting, and security headers.",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "@hms/shared": "*",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "http-proxy-middleware": "^3.0.0",
+    "rate-limit-redis": "^4.2.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.0",
+    "supertest": "^7.0.0"
+  }
+}

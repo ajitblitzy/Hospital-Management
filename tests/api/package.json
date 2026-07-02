@@ -1,0 +1,25 @@
+{
+  "name": "@hms/api-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API test automation (Postman collections executed headlessly via Newman) for the Hospital Management System (HMS) API gateway.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "pretest": "node -e \"require('fs').mkdirSync('newman', { recursive: true })\"",
+    "test": "npm run test:api && npm run test:rbac",
+    "test:api": "newman run collections/hms-api.postman_collection.json -e environments/local.postman_environment.json --reporters cli,junit --reporter-junit-export newman/hms-api.junit.xml",
+    "test:rbac": "newman run collections/rbac.postman_collection.json -e environments/local.postman_environment.json --reporters cli,junit --reporter-junit-export newman/rbac.junit.xml",
+    "test:local": "npm test",
+    "test:deployed": "npm run pretest && newman run collections/hms-api.postman_collection.json -e environments/deployed.postman_environment.json --reporters cli,junit --reporter-junit-export newman/hms-api.junit.xml",
+    "test:health": "newman run collections/hms-api.postman_collection.json -e environments/local.postman_environment.json --folder Health --reporters cli"
+  },
+  "devDependencies": {
+    "newman": "^6.2.1"
+  },
+  "dependencies": {
+    "@hms/test-fixtures": "file:../fixtures"
+  }
+}

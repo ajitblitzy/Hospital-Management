@@ -1,0 +1,42 @@
+{
+  "name": "@hms/pharmacy-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HMS Pharmacy Management service: medicine inventory, prescriptions, and expiry alerts.",
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18",
+    "npm": ">=9"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "@hms/shared": "*",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/index.js"
+    ],
+    "coverageDirectory": "coverage",
+    "clearMocks": true,
+    "verbose": true
+  }
+}

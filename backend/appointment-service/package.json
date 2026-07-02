@@ -1,0 +1,44 @@
+{
+  "name": "@hms/appointment-service",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HMS Appointment Scheduling Service: doctor calendar management, online booking, double-booking conflict prevention, and SMS/email reminders.",
+  "license": "UNLICENSED",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18",
+    "npm": ">=9"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "worker": "node src/worker.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "@hms/shared": "*",
+    "express": "^4.18.2",
+    "luxon": "^3.4.4",
+    "nodemailer": "^6.9.13"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/index.js",
+      "!src/worker.js"
+    ],
+    "coverageDirectory": "coverage",
+    "clearMocks": true,
+    "verbose": true
+  }
+}
