@@ -1,0 +1,78 @@
+# =============================================================================
+# Shared .dockerignore TEMPLATE for Hospital Management System (HMS) images.
+# =============================================================================
+# This file documents the recommended ignore patterns for building HMS service
+# images. It is a TEMPLATE / reference — a `.dockerignore` is only honored at the
+# ROOT of a build context, so copy the relevant patterns to:
+#   * the repository root  ../../.dockerignore   (backend services build with
+#     `context: .` / repo-root context because they depend on the @hms/shared
+#     workspace at ../../backend/shared), and
+#   * ../../frontend/.dockerignore                (the frontend builds with
+#     `context: ./frontend`). The frontend already ships its own .dockerignore.
+#
+# Goal: keep build contexts small and NEVER leak host node_modules or local
+# secrets (.env) into images. (QA/DevOps strategy: "Docker image creation".)
+
+# --- Dependencies (always reinstalled inside the image) ---
+node_modules
+**/node_modules
+
+# --- Environment & secrets (NEVER bake secrets into an image) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Build output ---
+dist
+build
+out
+coverage
+**/dist
+**/build
+**/coverage
+*.tsbuildinfo
+
+# --- Tests & tooling not needed at runtime ---
+**/__tests__
+**/*.test.js
+**/*.test.jsx
+**/*.spec.js
+.nyc_output
+.eslintcache
+playwright-report
+test-results
+
+# --- Logs & temp ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs
+tmp
+temp
+
+# --- Version control & CI ---
+.git
+.gitignore
+.github
+
+# --- Docker meta (no need to copy into the image) ---
+Dockerfile
+**/Dockerfile
+.dockerignore
+**/.dockerignore
+docker-compose*.yml
+
+# --- Editor / OS cruft ---
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- Infra & docs not needed inside service images ---
+infrastructure
+*.md
+**/*.md

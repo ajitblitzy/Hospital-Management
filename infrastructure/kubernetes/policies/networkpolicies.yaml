@@ -1,0 +1,233 @@
+# =============================================================================
+# HMS NetworkPolicies — least-privilege pod-to-pod traffic within namespace `hms`
+# -----------------------------------------------------------------------------
+# Implements "Patient data privacy" (doc 05 QA/Testing & DevOps Strategy risk area)
+# and defense-in-depth around "API gateway protection" (doc 03 Technical Architecture).
+#
+# IMPORTANT: NetworkPolicies are only enforced by a CNI plugin that supports them
+# (e.g., Calico, Cilium, or the AWS VPC CNI with network policy enforcement enabled).
+# On a cluster without an enforcing CNI these objects are accepted but have NO effect.
+#
+# Model: start from a namespace-wide default-deny for INGRESS, then add explicit
+# allow rules that preserve exactly the documented traffic paths:
+#   internet -> ingress controller -> api-gateway:8080 / frontend:3000
+#   api-gateway -> backend services :4001-4009
+#   api-gateway + backend services -> postgres:5432 / redis:6379
+#   all pods -> DNS (kube-dns) :53
+#
+# Label contract (must match the workload pod templates authored under
+# ../api-gateway/, ../services/, ../frontend/, ../datastores/):
+#   app.kubernetes.io/name: <component>            # api-gateway, auth-service, ..., frontend, postgres, redis
+#   app.kubernetes.io/part-of: hospital-management-system
+#
+# NOTE on health probes: kubelet liveness/readiness probes to GET /health originate
+# from the node (host network) and are generally NOT blocked by these pod-selecting
+# ingress rules on Calico/Cilium/AWS VPC CNI. If a strict CNI blocks them, add an
+# allow rule permitting the kubelet/host source for the probe port.
+# =============================================================================
+
+---
+# 1) Default-deny all INGRESS for every pod in `hms`.
+#    Egress is intentionally NOT denied here (handled by the egress policy below),
+#    so this baseline only closes inbound traffic until explicitly allowed.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: hms
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  podSelector: {}          # selects ALL pods in the namespace
+  policyTypes:
+    - Ingress
+  # no ingress rules => deny all inbound traffic by default
+
+---
+# 2) Allow the ingress controller to reach the api-gateway on 8080.
+#    Adjust the namespaceSelector label to match YOUR ingress controller's namespace.
+#    `kubernetes.io/metadata.name` is auto-set by Kubernetes (>=1.21) to the namespace name.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-api-gateway
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx   # PLACEHOLDER: ingress controller namespace
+      ports:
+        - protocol: TCP
+          port: 8080
+
+---
+# 3) Allow the ingress controller to reach the frontend (nginx SPA) on 3000.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-frontend
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx   # PLACEHOLDER: ingress controller namespace
+      ports:
+        - protocol: TCP
+          port: 3000
+
+---
+# 4) Allow ONLY the api-gateway pods to reach the backend microservices on 4001-4009.
+#    Target selector uses the shared part-of label (per the HMS label convention); the
+#    per-service listen ports 4001-4009 are what actually matter. Direct service-to-service
+#    traffic is NOT permitted here — add a dedicated rule later if that path is introduced.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-services
+  namespace: hms
+  labels:
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: hospital-management-system
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: api-gateway
+      ports:
+        - protocol: TCP
+          port: 4001
+        - protocol: TCP
+          port: 4002
+        - protocol: TCP
+          port: 4003
+        - protocol: TCP
+          port: 4004
+        - protocol: TCP
+          port: 4005
+        - protocol: TCP
+          port: 4006
+        - protocol: TCP
+          port: 4007
+        - protocol: TCP
+          port: 4008
+        - protocol: TCP
+          port: 4009
+
+---
+# 5) Allow ONLY the app tier (api-gateway + the 9 backend services) to reach PostgreSQL:5432.
+#    The `from` selector = part-of HMS but NOT postgres/redis/frontend (i.e., gateway + services).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-postgres-access
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/part-of
+                operator: In
+                values: ["hospital-management-system"]
+              - key: app.kubernetes.io/name
+                operator: NotIn
+                values: ["postgres", "redis", "frontend"]
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+# 6) Allow ONLY the app tier (api-gateway + the 9 backend services) to reach Redis:6379.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-access
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/part-of
+                operator: In
+                values: ["hospital-management-system"]
+              - key: app.kubernetes.io/name
+                operator: NotIn
+                values: ["postgres", "redis", "frontend"]
+      ports:
+        - protocol: TCP
+          port: 6379
+
+---
+# 7) Egress: guarantee DNS resolution for ALL pods, and (for now) keep other egress open.
+#    WHY the catch-all: selecting a pod under policyTypes:[Egress] switches that pod to
+#    default-deny egress. A DNS-only rule would then break gateway->services,
+#    services->postgres/redis, and external calls (SMTP/SMS/S3/AWS) — violating the
+#    "must NOT block documented traffic paths" rule. The second rule (`- {}`) therefore
+#    keeps egress open for now. To enforce STRICTER egress later, remove the `- {}` rule
+#    and add explicit allow rules (e.g., intra-namespace, and specific external CIDRs/ports).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: hms
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # DNS (CoreDNS/kube-dns) — required for Kubernetes Service discovery
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # OPEN placeholder — remove to enforce stricter egress (keeps intra-cluster + external egress working today)
+    - {}

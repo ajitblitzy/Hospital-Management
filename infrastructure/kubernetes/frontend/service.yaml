@@ -1,0 +1,20 @@
+# HMS Frontend Service — stable in-cluster ClusterIP for the nginx SPA pods.
+# This is the name/port that ../ingress.yaml `/` rule targets: frontend:3000.
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: frontend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP

@@ -1,0 +1,84 @@
+# HMS Pharmacy Service Deployment — backend microservice for the Pharmacy Management
+# module: medicine inventory tracking, prescription management, and expiry alerts
+# (01_Hospital_Management_Product_Vision_and_Scope.pdf). The service is stateless
+# (sessions/queues and Redis-backed expiry-alert jobs live in Redis) so it scales
+# horizontally (03_Hospital_Management_Technical_Architecture.pdf — "Horizontal scaling
+# using Kubernetes"). Runs in the `hms` namespace behind the api-gateway (route
+# /api/pharmacy). HA: replicas: 2 (the HorizontalPodAutoscaler in hpa.yaml scales this
+# Deployment between 2 and 10 pods).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pharmacy-service
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: pharmacy-service
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pharmacy-service
+      app.kubernetes.io/part-of: hospital-management-system
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pharmacy-service
+        app.kubernetes.io/part-of: hospital-management-system
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/managed-by: kubectl
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: pharmacy-service
+          # Placeholder image reference ONLY. CI/CD (the GitHub Actions workflows in the
+          # repo-root .github/ — ../../../../.github/ from here) substitutes the real Amazon
+          # ECR URI + tag at deploy time (e.g. `kubectl set image` / `kustomize edit set
+          # image`); images are built and pushed by infrastructure/docker/ (../../../docker/).
+          image: <ECR_REGISTRY>/hms-pharmacy-service:<IMAGE_TAG>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4006
+              name: http
+          # ALL runtime config + secrets are injected via the shared ConfigMap/Secret
+          # (../../configmap.yaml -> hms-config, ../../secret.example.yaml -> hms-secrets).
+          # The app binds to PHARMACY_SERVICE_PORT (=4006) from hms-config and reaches
+          # PostgreSQL/Redis via the `postgres`/`redis` service DNS names (never localhost).
+          # Never hardcode configuration or secrets in this manifest.
+          envFrom:
+            - configMapRef:
+                name: hms-config
+            - secretRef:
+                name: hms-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4006
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4006
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false

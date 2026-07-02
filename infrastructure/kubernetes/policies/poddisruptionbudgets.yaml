@@ -1,0 +1,188 @@
+# =============================================================================
+# HMS PodDisruptionBudgets — High Availability (namespace `hms`)
+# -----------------------------------------------------------------------------
+# Implements doc 05 (QA/Testing & DevOps Strategy) risk area "High availability
+# requirements" and supports doc 03 "Horizontal scaling using Kubernetes".
+#
+# A PodDisruptionBudget limits VOLUNTARY disruptions (node drains, cluster
+# upgrades, `kubectl drain`). `minAvailable: 1` guarantees at least one replica
+# of each workload keeps serving while nodes are drained one at a time.
+#
+# IMPORTANT: minAvailable:1 assumes each Deployment runs >= 2 replicas
+# (align with the HPA `minReplicas` under ../api-gateway/, ../services/,
+# ../frontend/). With a single replica, minAvailable:1 will BLOCK voluntary
+# evictions of that pod. For larger deployments, `maxUnavailable: 1` is an
+# equivalent alternative that scales with replica count.
+#
+# Covers all 11 deployables (api-gateway + 9 backend services + frontend).
+# Datastores (postgres/redis) are handled separately under ../datastores/.
+#
+# Selector/label contract (match the workload pod templates):
+#   app.kubernetes.io/name: <component>
+#   app.kubernetes.io/part-of: hospital-management-system
+# =============================================================================
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: auth-service
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: auth-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: patient-service-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: patient-service
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: patient-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: appointment-service-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: appointment-service
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: appointment-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: emr-service-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: emr-service
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: emr-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: billing-service-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: billing-service
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: billing-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pharmacy-service-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: pharmacy-service
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pharmacy-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: laboratory-service-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: laboratory-service
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: laboratory-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: inventory-service-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: inventory-service
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inventory-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: reports-service-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: reports-service
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reports-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: hospital-management-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend

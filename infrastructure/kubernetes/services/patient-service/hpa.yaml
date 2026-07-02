@@ -1,0 +1,34 @@
+# HMS Patient Service HorizontalPodAutoscaler — implements
+# "Horizontal scaling using Kubernetes" (03_Hospital_Management_Technical_Architecture.pdf).
+# Scales the patient-service Deployment between 2 and 10 replicas based on CPU (70%) and
+# memory (80%) average utilization. Requires metrics-server in the cluster.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: patient-service
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: patient-service
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: patient-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

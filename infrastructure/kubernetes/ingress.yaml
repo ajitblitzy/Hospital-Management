@@ -1,0 +1,83 @@
+# =============================================================================
+# HMS Ingress — SINGLE external entry point for the Hospital Management System.
+# -----------------------------------------------------------------------------
+# Routing (path order matters — the most specific rule must come first):
+#   /api  -> api-gateway:8080   (ALL backend/API traffic enters via the gateway)
+#   /     -> frontend:3000      (React/Vite single-page app; catch-all)
+#
+# Architecture reference — 03_Hospital_Management_Technical_Architecture.pdf
+# ("Load balancing for APIs", "API gateway protection"): every external API
+# request is funneled through the api-gateway, which performs JWT verification,
+# rate limiting and RBAC before proxying to the downstream microservices
+# (auth, patients, appointments, EMR, laboratory, reports, ...). This Ingress is
+# ONLY the L7 load balancer / TLS terminator sitting in front of that gateway.
+#
+# IMPORTANT:
+#   * host (hms.example.com) and the TLS secret (hms-tls) are PLACEHOLDERS —
+#     override them per environment (dev / staging / prod) via an overlay/patch
+#     or environment-specific values. Never commit real hostnames or
+#     certificates here.
+#   * Do NOT rewrite / strip the /api prefix. The gateway route table expects
+#     the full path (/api/auth, /api/patients, ... /api/reports), so no
+#     nginx.ingress.kubernetes.io/rewrite-target is configured (see below).
+#   * The NGINX ingress controller is the ACTIVE configuration. AWS ALB
+#     equivalents are provided as commented-out alternatives (see the
+#     annotations block and spec.ingressClassName).
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hms-ingress
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: hms
+    app.kubernetes.io/part-of: hospital-management-system
+  annotations:
+    # --- NGINX ingress controller (ACTIVE) ---------------------------------
+    # Force HTTPS: redirect every plain-HTTP request to HTTPS.
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # TLS certificate lifecycle handled by cert-manager. Placeholder issuer —
+    # override with the ClusterIssuer that exists in the target cluster.
+    cert-manager.io/cluster-issuer: "letsencrypt-prod" # placeholder
+    # NOTE: intentionally NO nginx.ingress.kubernetes.io/rewrite-target here.
+    # A rewrite would strip the /api prefix that the gateway route table
+    # depends on, so the prefix is preserved and passed through untouched.
+    # --- AWS ALB alternative (uncomment + set spec.ingressClassName: alb) ---
+    # alb.ingress.kubernetes.io/scheme: internet-facing
+    # alb.ingress.kubernetes.io/target-type: ip
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    # alb.ingress.kubernetes.io/certificate-arn: <ACM_CERT_ARN> # placeholder ACM cert ARN
+    # alb.ingress.kubernetes.io/ssl-redirect: '443'
+spec:
+  # Active controller: NGINX. Change to "alb" when using the AWS Load Balancer
+  # Controller (and uncomment the alb.* annotations above).
+  ingressClassName: nginx
+  tls:
+    # Placeholder host + secret — overridden per environment. The TLS secret is
+    # managed by cert-manager (NGINX) or supplied via certificate-arn (ALB).
+    - hosts:
+        - hms.example.com # placeholder host
+      secretName: hms-tls # placeholder TLS secret
+  rules:
+    # Placeholder host — override per environment (dev / staging / prod).
+    - host: hms.example.com
+      http:
+        paths:
+          # More specific rule FIRST: all /api* traffic -> api-gateway:8080.
+          # The /api prefix is preserved (no rewrite) so the gateway receives
+          # /api/*.
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080
+          # Catch-all SECOND: everything else -> frontend SPA on :3000.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000

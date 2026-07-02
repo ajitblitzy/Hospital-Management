@@ -1,0 +1,27 @@
+# ==============================================================================
+# HMS Production Namespace
+# ------------------------------------------------------------------------------
+# Apply this manifest FIRST. Every other Hospital Management System (HMS)
+# Kubernetes resource under infrastructure/kubernetes/ (ConfigMap "hms-config",
+# Secret "hms-secrets", all Deployments / Services / HPAs, the Ingress,
+# datastores, and the NetworkPolicies) is scoped to this namespace by setting
+# metadata.namespace: hms.
+#
+#   kubectl apply -f infrastructure/kubernetes/namespace.yaml
+#
+# The namespace name is literally "hms" and must NOT be prefixed or suffixed,
+# because sibling manifests reference it by that exact value.
+# ==============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hms
+  labels:
+    # Kubernetes recommended common labels, applied consistently across every
+    # HMS resource so tooling can identify and group the application.
+    app.kubernetes.io/name: hms
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/managed-by: kubectl
+    # Plain "name" label so NetworkPolicy namespaceSelectors in policies/ can
+    # select this namespace via matchLabels: { name: hms }.
+    name: hms

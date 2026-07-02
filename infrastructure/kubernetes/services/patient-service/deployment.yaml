@@ -1,0 +1,83 @@
+# HMS Patient Service Deployment — backend microservice for the "Patient Registration"
+# core module (01_Hospital_Management_Product_Vision_and_Scope.pdf): patient profile CRUD,
+# unique patient-ID generation, ID-document upload to AWS S3, and encrypted PII. Sits
+# behind the api-gateway (route /api/patients) and is reached in-cluster at
+# patient-service.hms.svc.cluster.local:4002. Stateless (sessions/queues live in Redis) →
+# horizontally scalable. Grounded in doc 03 (03_Hospital_Management_Technical_Architecture.pdf:
+# modular microservices; encrypted patient data storage; horizontal scaling using Kubernetes).
+# Runs in the `hms` namespace. HA: replicas: 2 (the HorizontalPodAutoscaler in hpa.yaml
+# scales this Deployment between 2 and 10 pods).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: patient-service
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: patient-service
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    # MUST equal the pod template labels below (Kubernetes requires the selector to be a
+    # subset of, and here we keep it equal to, the pod template identity labels).
+    matchLabels:
+      app.kubernetes.io/name: patient-service
+      app.kubernetes.io/part-of: hospital-management-system
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: patient-service
+        app.kubernetes.io/part-of: hospital-management-system
+    spec:
+      containers:
+        - name: patient-service
+          # Placeholder image reference ONLY. CI/CD (../../../../.github/ workflows +
+          # the image build/push in ../../../docker/) substitutes the real Amazon ECR
+          # URI and tag at deploy time (e.g. `kubectl set image` /
+          # `kustomize edit set image` / `sed`).
+          image: <ECR_REGISTRY>/hms-patient-service:<IMAGE_TAG>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 4002
+              name: http
+          # ALL runtime config + secrets arrive via the shared ConfigMap/Secret ONLY
+          # (../../configmap.yaml -> hms-config, ../../secret.example.yaml -> hms-secrets):
+          # PATIENT_SERVICE_PORT=4002 (keep containerPort in sync), POSTGRES_HOST=postgres,
+          # REDIS_HOST=redis (never localhost), the AWS S3 upload settings, and
+          # DATA_ENCRYPTION_KEY (encrypted PII). Never hardcode config/secrets here.
+          envFrom:
+            - configMapRef:
+                name: hms-config
+            - secretRef:
+                name: hms-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false

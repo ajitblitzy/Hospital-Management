@@ -1,0 +1,67 @@
+# HMS Frontend (React SPA served by nginx) — Deployment
+# Serves the static Vite build via nginx on port 3000 (see ../../../frontend/nginx.conf,
+# ../../../frontend/Dockerfile). Fronted by ../ingress.yaml at path `/`.
+# Grounded in docs 03 (React.js frontend, Docker; "Horizontal scaling using Kubernetes")
+# and 05 ("Kubernetes deployment", "High availability requirements").
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: 2 # HA: two replicas so a node/pod failure never takes the SPA fully offline
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/part-of: hospital-management-system
+        app.kubernetes.io/component: frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: frontend
+          # Placeholder image reference. CI/CD (../../../.github/ workflows using ../../docker/
+          # build+push) substitutes the real Amazon ECR URI + tag, e.g. via `kubectl set image`
+          # or `kustomize edit set image`.
+          image: <ECR_REGISTRY>/hms-frontend:<IMAGE_TAG>
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          # The static frontend intentionally receives NO injected configuration or credentials:
+          # VITE_API_BASE_URL is baked into the JS bundle at build time by Vite
+          # (see ../../../frontend/Dockerfile). No ConfigMap or Secret data is mounted here.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false

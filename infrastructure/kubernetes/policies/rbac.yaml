@@ -1,0 +1,73 @@
+# =============================================================================
+# HMS RBAC — least-privilege ServiceAccount(s) for namespace `hms`
+# -----------------------------------------------------------------------------
+# Implements Kubernetes-level least privilege supporting "Patient data privacy"
+# (doc 05 QA/Testing & DevOps Strategy) and complements the application-level
+# "Role-based authorization" (doc 03 Technical Architecture) which is enforced
+# in auth-service / api-gateway across the 8 user roles — NOT here.
+#
+# The HMS application pods (api-gateway, the 9 backend services, frontend) are
+# plain Node.js/nginx workloads that do NOT talk to the Kubernetes API. Therefore:
+#   * They use a dedicated ServiceAccount whose API token is NOT mounted
+#     (automountServiceAccountToken: false) — nothing to steal, nothing to misuse.
+#   * NO Role / RoleBinding is required, and absolutely NO ClusterRole or
+#     cluster-admin is granted (see commented template below for the rare case a
+#     component genuinely needs namespaced API access).
+#
+# Deployments should reference this account, e.g.:
+#   spec:
+#     template:
+#       spec:
+#         serviceAccountName: hms-app
+#         automountServiceAccountToken: false   # also set at pod level for defense-in-depth
+# =============================================================================
+
+---
+# Shared least-privilege ServiceAccount for all HMS application workloads.
+# (Alternatively, create one ServiceAccount per workload for finer-grained EKS IRSA
+#  IAM scoping — e.g., only patient-service/reports-service get S3 access.)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hms-app
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: hms-app
+    app.kubernetes.io/part-of: hospital-management-system
+  # --- EKS IRSA (optional) -------------------------------------------------
+  # Prefer IAM Roles for Service Accounts over static AWS keys for S3 /
+  # Secrets Manager access. Uncomment and set the IAM role ARN per environment:
+  # annotations:
+  #   eks.amazonaws.com/role-arn: <IAM_ROLE_ARN>   # PLACEHOLDER
+automountServiceAccountToken: false
+
+# =============================================================================
+# OPTIONAL TEMPLATE (kept commented — grants nothing by default).
+# Use ONLY if a specific component must read namespaced resources via the K8s API.
+# Keep it namespaced (Role + RoleBinding), least-privilege, and NEVER a ClusterRole.
+# -----------------------------------------------------------------------------
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: Role
+# metadata:
+#   name: hms-app-read
+#   namespace: hms
+# rules:
+#   - apiGroups: [""]
+#     resources: ["configmaps"]
+#     verbs: ["get", "list", "watch"]
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: RoleBinding
+# metadata:
+#   name: hms-app-read
+#   namespace: hms
+# subjects:
+#   - kind: ServiceAccount
+#     name: hms-app
+#     namespace: hms
+# roleRef:
+#   kind: Role
+#   name: hms-app-read
+#   apiGroup: rbac.authorization.k8s.io
+# =============================================================================
