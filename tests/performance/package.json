@@ -1,0 +1,26 @@
+{
+  "name": "@hms/performance-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HMS performance & load tests (k6) targeting the QA-spec risk areas: concurrent billing transactions, appointment-scheduling conflicts, and high-availability endpoints.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test:health": "k6 run health-availability.js",
+    "test:billing": "k6 run billing-load.js",
+    "test:appointments": "k6 run appointment-conflict.js",
+    "test:smoke": "k6 run -e MODE=smoke health-availability.js",
+    "test:load": "k6 run -e MODE=load billing-load.js",
+    "test:all": "npm run test:health && npm run test:billing && npm run test:appointments",
+    "clean": "rm -rf test-results"
+  },
+  "keywords": [
+    "k6",
+    "performance",
+    "load-testing",
+    "hms",
+    "healthcare"
+  ],
+  "license": "UNLICENSED"
+}

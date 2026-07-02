@@ -1,0 +1,54 @@
+{
+  "name": "@hms/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "React.js single-page application for the Hospital Management System — role-based UIs for all 8 roles across all 8 core modules.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint . --ext .js,.jsx --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "@reduxjs/toolkit": "^2.2.7",
+    "react-redux": "^9.1.2",
+    "axios": "^1.7.7",
+    "@mui/material": "^5.16.7",
+    "@mui/icons-material": "^5.16.7",
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@mui/x-data-grid": "^7.18.0",
+    "@mui/x-date-pickers": "^7.18.0",
+    "recharts": "^2.12.7",
+    "react-hook-form": "^7.53.0",
+    "@hookform/resolvers": "^3.9.0",
+    "yup": "^1.4.0",
+    "date-fns": "^3.6.0",
+    "jwt-decode": "^4.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.8",
+    "@vitejs/plugin-react": "^4.3.1",
+    "vitest": "^2.1.1",
+    "@vitest/coverage-v8": "^2.1.1",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/user-event": "^14.5.2",
+    "jsdom": "^25.0.1",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.1",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.12"
+  }
+}

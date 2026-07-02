@@ -1,0 +1,33 @@
+{
+  "name": "@hms/test-fixtures",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared synthetic test data and seeded login credentials for the Hospital Management System repository-level test suites (e2e, api, performance, security).",
+  "license": "UNLICENSED",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "credentials.js",
+    "patients.json",
+    "doctors.json",
+    "appointments.json",
+    "prescriptions.json",
+    "invoices.json",
+    "laboratory_reports.json",
+    "admissions.json",
+    "departments.json",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "validate": "node -e \"const f=require('./index.js');if(f.roles.length!==8)throw new Error('expected 8 roles');if(f.departments.length!==9)throw new Error('expected 9 departments');console.log('@hms/test-fixtures OK:',f.roles.length,'roles,',Object.keys(f.entities).length,'entities')\""
+  },
+  "keywords": [
+    "hms",
+    "test-fixtures",
+    "synthetic-data",
+    "testing"
+  ]
+}

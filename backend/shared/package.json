@@ -1,0 +1,65 @@
+{
+  "name": "@hms/shared",
+  "version": "0.1.0",
+  "description": "Shared common library for the Hospital Management System backend (DB/Redis clients, JWT & RBAC, logging, errors, encryption, validation, async queues, health/bootstrap helpers).",
+  "private": true,
+  "license": "UNLICENSED",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18",
+    "npm": ">=9"
+  },
+  "files": [
+    "index.js",
+    "config.js",
+    "logger.js",
+    "errors.js",
+    "encryption.js",
+    "jwt.js",
+    "db.js",
+    "redis.js",
+    "validation.js",
+    "rbac.js",
+    "queue.js",
+    "app.js",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "bullmq": "^5.7.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.0",
+    "pino": "^9.0.0",
+    "pino-http": "^10.0.0",
+    "zod": "^3.23.0"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0 || ^5.0.0"
+  },
+  "devDependencies": {
+    "express": "^4.18.2",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "*.js",
+      "!index.js",
+      "!jest.config.js"
+    ],
+    "coverageDirectory": "coverage",
+    "clearMocks": true,
+    "verbose": true
+  }
+}

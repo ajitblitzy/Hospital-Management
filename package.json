@@ -2,7 +2,7 @@
   "name": "hospital-management-system",
   "version": "0.1.0",
   "private": true,
-  "description": "Hospital Management System (HMS) monorepo workspace root. Orchestrates the React frontend and the Node.js/Express backend microservices and provides shared developer tooling. This is a private npm workspace root and intentionally contains NO application/runtime dependencies (those live in each frontend/backend workspace).",
+  "description": "Hospital Management System (HMS) monorepo workspace root — orchestrates the React frontend and Node.js/Express backend microservices with shared developer tooling.",
   "license": "UNLICENSED",
   "workspaces": [
     "frontend",
