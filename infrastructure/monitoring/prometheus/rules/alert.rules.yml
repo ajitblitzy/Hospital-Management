@@ -1,0 +1,98 @@
+# HMS Prometheus alerting rules
+# ---------------------------------------------------------------------------
+# Grounded in the HMS QA/DevOps strategy "High availability requirements" risk
+# area. Five alert families cover availability, HTTP error rate, HTTP latency,
+# resource saturation, and datastore health. Every alert carries a for:
+# duration, a severity label (warning|critical), and summary/description
+# annotations that reference the service label so Alertmanager (which routes
+# on severity/service) and Grafana join cleanly.
+# Loaded via prometheus.yml / prometheus.dev.yml rule_files: [/etc/prometheus/rules/*.yml].
+groups:
+  # 1. Availability - any scrape target (gateway, 9 domain services, frontend,
+  #    exporters) reporting up == 0.
+  - name: hms-availability
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target down: {{ $labels.job }} ({{ $labels.service }})"
+          description: "Prometheus target {{ $labels.instance }} for job {{ $labels.job }} / service {{ $labels.service }} has been unreachable (up == 0) for more than 2 minutes."
+
+  # 2 & 3. HTTP error rate and latency, consuming the recording rules.
+  - name: hms-http
+    rules:
+      - alert: HighErrorRate
+        expr: service:http_error_ratio:ratio5m > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate for {{ $labels.service }}"
+          description: "Service {{ $labels.service }} has a 5xx error ratio of {{ $value | humanizePercentage }} (> 5%) over the last 5m."
+
+      - alert: HighRequestLatency
+        expr: service:http_request_duration_seconds:p95 > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency for {{ $labels.service }}"
+          description: "Service {{ $labels.service }} p95 request latency is {{ $value }}s (> 0.5s) over the last 10m."
+
+  # 4. Resource saturation - app-exposed process metrics collected by hms-pods.
+  #    Self-contained: requires neither kube-state-metrics nor cAdvisor.
+  - name: hms-saturation
+    rules:
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes{namespace="hms"} > 1.5e9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage for {{ $labels.service }}"
+          description: "Service {{ $labels.service }} (pod {{ $labels.pod }}) resident memory is {{ $value | humanize }}B (> 1.5GB) for more than 10m."
+
+      - alert: HighCpuUsage
+        expr: rate(process_cpu_seconds_total{namespace="hms"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage for {{ $labels.service }}"
+          description: "Service {{ $labels.service }} (pod {{ $labels.pod }}) is using {{ $value | humanize }} CPU cores (> 0.8) averaged over 5m, sustained for 10m."
+
+      # cAdvisor / kube-state-metrics alternative (only if the cluster scrapes
+      # the kubelet). Commented out to keep this file functional against the
+      # metrics the hms-pods job actually collects:
+      # - alert: HighContainerMemory
+      #   expr: sum by (pod, namespace) (container_memory_working_set_bytes{namespace="hms"})
+      #         / sum by (pod, namespace) (kube_pod_container_resource_limits{namespace="hms",resource="memory"}) > 0.9
+      #   for: 10m
+      #   labels: { severity: warning }
+      #   annotations:
+      #     summary: "Container memory near limit for {{ $labels.pod }}"
+      #     description: "Pod {{ $labels.pod }} working set > 90% of its memory limit for 10m."
+
+  # 5. Datastore health - PostgreSQL 16 & Redis 7 via their exporters.
+  - name: hms-datastores
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down (service {{ $labels.service }})"
+          description: "postgres-exporter reports pg_up == 0 for service {{ $labels.service }} (instance {{ $labels.instance }}) for more than 2 minutes."
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is down (service {{ $labels.service }})"
+          description: "redis-exporter reports redis_up == 0 for service {{ $labels.service }} (instance {{ $labels.instance }}) for more than 2 minutes."

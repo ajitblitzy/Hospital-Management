@@ -1,0 +1,267 @@
+# ==============================================================================
+# HMS Monitoring — Alertmanager (ConfigMap + Deployment + Service)
+# ------------------------------------------------------------------------------
+# Deploys Alertmanager into the dedicated "monitoring" namespace (created by
+# namespace.yaml, which MUST be applied first). This manifest defines three
+# resources:
+#   1. ConfigMap  "alertmanager-config" — embeds ../prometheus/alertmanager.yml
+#      VERBATIM (byte-for-byte) as data."alertmanager.yml".
+#   2. Deployment "alertmanager"        — runs prom/alertmanager (pinned image).
+#   3. Service    "alertmanager"        — ClusterIP exposing port 9093.
+#
+# SOURCE OF TRUTH for the embedded configuration:
+#   infrastructure/monitoring/prometheus/alertmanager.yml
+#   The ConfigMap block below is a verbatim copy — do NOT paraphrase or reformat
+#   it, and keep the two files byte-for-byte in sync.
+#
+# DNS / COORDINATION CONTRACT (LOCKED — do not rename):
+#   Prometheus's `alerting` block (../prometheus/prometheus.yml) hardcodes the
+#   target alertmanager.monitoring.svc.cluster.local:9093. That in-cluster DNS
+#   name derives from <service>.<namespace>.svc.cluster.local, so the Service
+#   name ("alertmanager"), namespace ("monitoring") and port (9093) defined
+#   below are FIXED. Changing any of them breaks alert delivery from Prometheus.
+#
+# SECRETS — receivers are PLACEHOLDERS ONLY:
+#   The embedded config ships an obviously-fake webhook
+#   (http://alert-webhook.example.com/placeholder) and contains NO real
+#   endpoints, tokens or credentials. Per doc 05
+#   (05_Hospital_Management_QA_Testing_and_DevOps_Strategy.pdf — "Patient data
+#   privacy"), real receiver secrets are NEVER committed to git; they are
+#   injected at deploy time via a Kubernetes Secret / environment variables
+#   (prefer Alertmanager's *_file options pointing at a mounted Secret file).
+#
+# STORAGE:
+#   The "storage" volume is an emptyDir — the notification log and silences are
+#   EPHEMERAL and are lost when the pod restarts. This is acceptable for a
+#   single-replica alert router; use a PersistentVolumeClaim (plus Alertmanager
+#   clustering) for high availability.
+#
+# Grounded in doc 05 ("Monitoring using Prometheus and Grafana") and doc 03
+# (03_Hospital_Management_Technical_Architecture.pdf — "Containerization:
+# Docker & Kubernetes"). Apply after namespace.yaml. 2-space indentation, no tabs.
+# ==============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/managed-by: kubectl
+data:
+  # VERBATIM byte-for-byte copy of infrastructure/monitoring/prometheus/alertmanager.yml.
+  # Mounted read-only at /etc/alertmanager by the Deployment below and is the single
+  # source of truth for Alertmanager routing / receivers / inhibition. Keep the two
+  # files in sync; do not paraphrase or reformat this embedded block.
+  alertmanager.yml: |
+    # =============================================================================
+    # HMS Alertmanager configuration — PLACEHOLDER receivers only. No real secrets/URLs.
+    # -----------------------------------------------------------------------------
+    # Real receiver endpoints (Slack / PagerDuty / email / webhook URLs, tokens,
+    # passwords, and API keys) are injected at DEPLOY TIME via environment variables
+    # or a Kubernetes Secret by the monitoring ../kubernetes/ stack (the Alertmanager
+    # pod runs in the "monitoring" namespace). Do NOT commit real webhook URLs or
+    # tokens to this repository — this file is version-controlled and MUST remain
+    # secret-free.
+    #
+    # Routing contract:
+    #   Alerts are routed on the labels emitted by the Prometheus alert rules in
+    #   rules/alert.rules.yml — primarily:
+    #     * severity : "warning" | "critical"
+    #     * service  : the HMS microservice that owns the alert
+    #
+    # Validation:
+    #   Structurally compatible with `amtool check-config alertmanager.yml`.
+    #   2-space indentation, no tabs.
+    # =============================================================================
+
+    global:
+      # How long to wait after an alert stops firing before Alertmanager declares it
+      # resolved and sends a resolution notification. Applies to every receiver
+      # unless individually overridden.
+      resolve_timeout: 5m
+
+    # -----------------------------------------------------------------------------
+    # Routing tree
+    # -----------------------------------------------------------------------------
+    # The root route is the default / fallback path. Non-critical alerts fall through
+    # to the "default-null" receiver (they are grouped and deduplicated but not
+    # paged). Critical alerts additionally match the child route below and fan out to
+    # the "critical-webhook" receiver.
+    route:
+      receiver: "default-null"
+      # Collapse alerts that share the same alertname + owning service into a single
+      # notification to reduce noise.
+      group_by: ["alertname", "service"]
+      # Buffer alerts of a brand-new group for 30s before the first notification so
+      # related alerts can be batched together.
+      group_wait: 30s
+      # Wait 5m before notifying about new alerts added to a group that already had
+      # its initial notification sent.
+      group_interval: 5m
+      # Re-send a notification for an alert that is still firing every 4h.
+      repeat_interval: 4h
+      routes:
+        # Critical alerts are delivered to the critical webhook receiver.
+        # `continue: true` lets the alert keep matching sibling routes and the root
+        # receiver too, so nothing is silently dropped as the routing tree evolves.
+        - matchers:
+            - severity = "critical"
+          receiver: "critical-webhook"
+          continue: true
+
+    # -----------------------------------------------------------------------------
+    # Receivers (PLACEHOLDERS ONLY — no real endpoints, tokens, or credentials)
+    # -----------------------------------------------------------------------------
+    receivers:
+      # "null" receiver: it has no notification config, so matching alerts are
+      # grouped and deduplicated but intentionally NOT delivered anywhere. This is
+      # the safe default sink for warning / informational noise.
+      - name: "default-null"
+
+      # Critical alerts. The webhook URL below is an OBVIOUSLY-FAKE placeholder.
+      # At deploy time the ../kubernetes/ stack overrides it with the real endpoint
+      # sourced from a Kubernetes Secret (prefer the `url_file:` option pointing at a
+      # mounted secret file over an inline `url:` in production overlays).
+      - name: "critical-webhook"
+        webhook_configs:
+          # PLACEHOLDER ONLY — replace via env / K8s Secret at deploy time.
+          # Never commit a real URL here.
+          - url: "http://alert-webhook.example.com/placeholder"
+            send_resolved: true
+
+      # ---------------------------------------------------------------------------
+      # OPTIONAL EXTRA CHANNELS (illustrative, intentionally commented out).
+      # Enable by uncommenting AND wiring the credential at deploy time. Note the use
+      # of the *_file options so the secret is read from a mounted Kubernetes Secret
+      # file at runtime instead of being written into this committed config:
+      #
+      # - name: "critical-slack"
+      #   slack_configs:
+      #     - api_url_file: /etc/alertmanager/secrets/slack_api_url   # mounted from K8s Secret
+      #       channel: "#hms-critical-alerts"
+      #       send_resolved: true
+      #
+      # - name: "critical-pagerduty"
+      #   pagerduty_configs:
+      #     - routing_key_file: /etc/alertmanager/secrets/pagerduty_routing_key  # mounted from K8s Secret
+      #       send_resolved: true
+      #
+      # - name: "critical-email"
+      #   email_configs:
+      #     - to: "oncall@hms.example.com"
+      #       # SMTP host + auth are supplied via global.smtp_* and a K8s Secret,
+      #       # never inlined here.
+      #       send_resolved: true
+      # ---------------------------------------------------------------------------
+
+    # -----------------------------------------------------------------------------
+    # Inhibition rules
+    # -----------------------------------------------------------------------------
+    # Suppress lower-severity noise while a higher-severity incident for the SAME
+    # alertname + service is already firing. This prevents a "warning" and a
+    # "critical" alert for the same underlying problem from both notifying.
+    inhibit_rules:
+      - source_matchers:
+          - severity = "critical"
+        target_matchers:
+          - severity = "warning"
+        equal: ["alertname", "service"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alertmanager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alertmanager
+        app.kubernetes.io/component: monitoring
+        app.kubernetes.io/part-of: hospital-management-system
+    spec:
+      # Alertmanager needs no root privileges. Run as the unprivileged "nobody"
+      # user (65534); fsGroup makes the emptyDir storage volume group-writable.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.27.0
+          args:
+            - "--config.file=/etc/alertmanager/alertmanager.yml"
+            - "--storage.path=/alertmanager"
+          ports:
+            - name: http
+              containerPort: 9093
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9093
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9093
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          volumeMounts:
+            # ConfigMap (embedded alertmanager.yml) mounted read-only at the path
+            # Alertmanager reads via --config.file above.
+            - name: config
+              mountPath: /etc/alertmanager
+              readOnly: true
+            # Writable scratch dir for notification/silence state (--storage.path).
+            - name: storage
+              mountPath: /alertmanager
+      volumes:
+        - name: config
+          configMap:
+            name: alertmanager-config
+        # emptyDir: state is EPHEMERAL and lost on pod restart (single replica).
+        - name: storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: alertmanager
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  # ClusterIP: reachable only inside the cluster. Prometheus (same "monitoring"
+  # namespace) routes alerts to alertmanager.monitoring.svc.cluster.local:9093.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: alertmanager
+  ports:
+    - name: http
+      port: 9093
+      targetPort: 9093
+      protocol: TCP

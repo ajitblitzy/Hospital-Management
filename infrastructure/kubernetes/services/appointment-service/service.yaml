@@ -1,0 +1,25 @@
+# HMS Appointment Service — stable in-cluster ClusterIP endpoint for the
+# appointment-service pods (module "Appointment Scheduling", doc 01). The api-gateway
+# routes /api/appointments to this Service; reachable in-cluster at
+# appointment-service.hms.svc.cluster.local:4003. Load-balances across the Deployment's
+# pods ("Load balancing for APIs" — doc 03).
+apiVersion: v1
+kind: Service
+metadata:
+  name: appointment-service
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: appointment-service
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: appointment-service
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  type: ClusterIP
+  # Selector matches the Deployment's pod template identity label (deployment.yaml).
+  selector:
+    app.kubernetes.io/name: appointment-service
+  ports:
+    - name: http
+      port: 4003
+      targetPort: 4003
+      protocol: TCP

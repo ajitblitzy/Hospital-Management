@@ -1,0 +1,102 @@
+# =============================================================================
+# Grafana Provisioning ConfigMaps - Hospital Management System (HMS)
+# =============================================================================
+# Monitoring stack: Prometheus + Grafana. Grounded in the HMS documentation set:
+#   Hospital_Management_Documentation_Package/05_Hospital_Management_QA_Testing_and_DevOps_Strategy.pdf
+#   Hospital_Management_Documentation_Package/03_Hospital_Management_Technical_Architecture.pdf
+#
+# This file is a DEPLOY-TIME MIRROR: each ConfigMap embeds, byte-for-byte, the
+# Grafana provisioning file authored in the sibling ../grafana/ tree. The copies
+# MUST NOT diverge - edit the source-of-truth files and regenerate; never edit
+# the embedded blocks below by hand.
+#
+# Source-of-truth files (authoritative):
+#   - infrastructure/monitoring/grafana/datasources/datasource.yml
+#   - infrastructure/monitoring/grafana/dashboards/dashboards.yml
+#
+# Mount targets in the Grafana pod (wired by grafana-deployment.yaml). Grafana
+# auto-loads provisioning from GF_PATHS_PROVISIONING=/etc/grafana/provisioning:
+#   - grafana-datasources        -> /etc/grafana/provisioning/datasources
+#   - grafana-dashboard-provider -> /etc/grafana/provisioning/dashboards
+#
+# The datasource uid 'prometheus' is referenced by every dashboard panel in
+# grafana-dashboards-configmap.yaml, and the provider options.path
+# (/var/lib/grafana/dashboards) MUST match where that dashboards ConfigMap is
+# mounted by grafana-deployment.yaml. Both values come verbatim from the
+# source-of-truth files embedded below.
+#
+# Regenerate (equivalent output) with kubectl:
+#   kubectl create configmap grafana-datasources --from-file=datasource.yml=infrastructure/monitoring/grafana/datasources/datasource.yml -n monitoring --dry-run=client -o yaml
+#   kubectl create configmap grafana-dashboard-provider --from-file=dashboards.yml=infrastructure/monitoring/grafana/dashboards/dashboards.yml -n monitoring --dry-run=client -o yaml
+# =============================================================================
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/managed-by: kubectl
+data:
+  # Verbatim copy of infrastructure/monitoring/grafana/datasources/datasource.yml
+  datasource.yml: |
+    # Grafana datasource provisioning - Hospital Management System (HMS)
+    # Registers Prometheus as Grafana's DEFAULT datasource so every provisioned
+    # dashboard (../dashboards/) queries it automatically on startup.
+    #
+    # Grafana provisioning schema v1. Mounted by ../../kubernetes/ (via ConfigMap)
+    # into the Grafana pod at /etc/grafana/provisioning/datasources/.
+    # NO secrets committed here - Prometheus needs no auth in-cluster; Grafana admin
+    # credentials are injected at deploy time via Kubernetes Secret/env.
+    apiVersion: 1
+
+    # Ensure a clean re-apply of the provisioned datasource on Grafana restart.
+    deleteDatasources:
+      - name: Prometheus
+        orgId: 1
+
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus # stable UID so dashboard JSON can reference it
+        access: proxy # Grafana backend proxies queries to Prometheus
+        # In-cluster Prometheus Service DNS in the `monitoring` namespace, port 9090.
+        # NEVER use localhost inside the cluster.
+        # Co-located/dev alternative form: http://prometheus:9090
+        url: http://prometheus.monitoring.svc.cluster.local:9090
+        isDefault: true # Prometheus MUST be the default datasource
+        editable: false # provisioned datasource - do not hand-edit in the UI
+        orgId: 1
+        version: 1
+        jsonData:
+          httpMethod: POST # POST allows large/complex PromQL queries
+          timeInterval: 15s # aligns with Prometheus scrape_interval (15s)
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/managed-by: kubectl
+data:
+  # Verbatim copy of infrastructure/monitoring/grafana/dashboards/dashboards.yml
+  dashboards.yml: |
+    apiVersion: 1
+
+    providers:
+      - name: 'HMS'
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
+        folder: 'HMS'
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: false

@@ -1,0 +1,24 @@
+# HMS Pharmacy Service — stable in-cluster ClusterIP endpoint for the pharmacy-service
+# pods. Reached by the api-gateway (route /api/pharmacy) at the in-cluster DNS name
+# pharmacy-service.hms.svc.cluster.local:4006. Load-balances across the Deployment's pods
+# ("Load balancing for APIs" — 03_Hospital_Management_Technical_Architecture.pdf).
+apiVersion: v1
+kind: Service
+metadata:
+  name: pharmacy-service
+  namespace: hms
+  labels:
+    app.kubernetes.io/name: pharmacy-service
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/managed-by: kubectl
+spec:
+  type: ClusterIP
+  # Selector matches the Deployment's pod template identity label (deployment.yaml).
+  selector:
+    app.kubernetes.io/name: pharmacy-service
+  ports:
+    - name: http
+      port: 4006
+      targetPort: 4006
+      protocol: TCP
