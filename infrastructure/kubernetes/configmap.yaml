@@ -1,0 +1,178 @@
+# ==============================================================================
+# HMS Non-Secret Runtime Configuration (ConfigMap "hms-config")
+# ------------------------------------------------------------------------------
+# This ConfigMap holds ALL NON-SECRET runtime configuration for the Hospital
+# Management System (HMS). Every backend microservice Deployment and the
+# frontend Deployment consume it verbatim via:
+#
+#     envFrom:
+#       - configMapRef:
+#           name: hms-config
+#
+# It MIRRORS the NON-SECRET keys of the repository-root `.env.example`
+# (../../.env.example), which is the single source of truth for environment
+# variable NAMES. SECRET keys (POSTGRES_PASSWORD, DATABASE_URL, REDIS_PASSWORD,
+# JWT_SECRET, JWT_REFRESH_SECRET, DATA_ENCRYPTION_KEY, SMTP_PASSWORD,
+# SMS_API_KEY, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) are NEVER placed here;
+# they live in the companion Secret "hms-secrets" (see secret.example.yaml).
+#
+# IN-CLUSTER HOSTNAMES: the default POSTGRES_HOST / REDIS_HOST / REDIS_URL
+# values below resolve to the in-cluster datastore Services `postgres` and
+# `redis` (created under datastores/) via Kubernetes service DNS -- never
+# `localhost`. When wiring the platform to MANAGED AWS datastores instead
+# (Amazon RDS for PostgreSQL / Amazon ElastiCache for Redis, provisioned under
+# ../aws/), OVERRIDE POSTGRES_HOST, REDIS_HOST and REDIS_URL to the managed
+# endpoints for the target environment.
+#
+# ENVIRONMENT-SPECIFIC VALUES: keys marked with an "override per environment"
+# comment (SMTP_HOST, SMS_PROVIDER, AWS_S3_BUCKET, FRONTEND_URL,
+# VITE_API_BASE_URL) carry safe defaults/placeholders and are expected to be
+# overridden per deployment environment (dev / staging / production).
+#
+# YAML CONTRACT: every value under `data:` MUST be a STRING. Numeric- and
+# boolean-looking values are therefore quoted; unquoted scalars would be parsed
+# as int/bool and rejected by `kubectl apply` for a ConfigMap.
+#
+#   kubectl apply -f infrastructure/kubernetes/namespace.yaml   # apply FIRST
+#   kubectl apply -f infrastructure/kubernetes/configmap.yaml
+# ==============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hms-config
+  namespace: hms
+  labels:
+    # Kubernetes recommended common labels, applied consistently across every
+    # HMS resource so tooling can identify and group the application.
+    app.kubernetes.io/name: hms
+    app.kubernetes.io/part-of: hospital-management-system
+    app.kubernetes.io/component: config
+    app.kubernetes.io/managed-by: kubectl
+data:
+  # ----------------------------------------------------------------------------
+  # General
+  # ----------------------------------------------------------------------------
+  # Runtime environment: controls logging, error verbosity and optimizations
+  # across all services. In-cluster workloads run in production mode.
+  NODE_ENV: "production"
+  # Application log verbosity: error | warn | info | http | debug | trace.
+  LOG_LEVEL: "info"
+
+  # ----------------------------------------------------------------------------
+  # API Gateway / Service Ports
+  # ----------------------------------------------------------------------------
+  # Canonical listen ports for each service. These MUST stay in sync with the
+  # api-gateway routing catalog (backend/api-gateway/src/services.js) and each
+  # service Deployment's containerPort / probe ports.
+  #
+  # Public entrypoint: the API gateway that fronts all backend microservices.
+  API_GATEWAY_PORT: "8080"
+  # Authentication & authorization service (login, JWT issuance, MFA, RBAC).
+  AUTH_SERVICE_PORT: "4001"
+  # Patient registration & profile service (patient records, ID documents).
+  PATIENT_SERVICE_PORT: "4002"
+  # Appointment management service (doctor calendars, bookings, reminders).
+  APPOINTMENT_SERVICE_PORT: "4003"
+  # Electronic Medical Records (EMR) service (clinical notes & history).
+  EMR_SERVICE_PORT: "4004"
+  # Billing & payments service (invoices, insurance claims, payments).
+  BILLING_SERVICE_PORT: "4005"
+  # Pharmacy service (medicine inventory, prescriptions, expiry alerts).
+  PHARMACY_SERVICE_PORT: "4006"
+  # Laboratory service (lab orders and result reports).
+  LABORATORY_SERVICE_PORT: "4007"
+  # Inventory service (medical supplies & stock management).
+  INVENTORY_SERVICE_PORT: "4008"
+  # Reporting & analytics service (operational & clinical reports).
+  REPORTS_SERVICE_PORT: "4009"
+
+  # ----------------------------------------------------------------------------
+  # PostgreSQL (primary relational datastore)
+  # ----------------------------------------------------------------------------
+  # Non-secret connection settings. POSTGRES_PASSWORD and DATABASE_URL are
+  # secrets and live in the "hms-secrets" Secret, NOT here.
+  #
+  # In-cluster: resolves to the `postgres` Service (datastores/). Override to
+  # the Amazon RDS endpoint when using a managed database.
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  # Application database name.
+  POSTGRES_DB: "hms"
+  # Database username the application connects as.
+  POSTGRES_USER: "hms_user"
+
+  # ----------------------------------------------------------------------------
+  # Redis (caching, sessions, async job processing)
+  # ----------------------------------------------------------------------------
+  # Non-secret connection settings. REDIS_PASSWORD is a secret and lives in the
+  # "hms-secrets" Secret, NOT here.
+  #
+  # In-cluster: resolves to the `redis` Service (datastores/). Override host and
+  # REDIS_URL to the Amazon ElastiCache endpoint when using a managed cache.
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_URL: "redis://redis:6379"
+
+  # ----------------------------------------------------------------------------
+  # Authentication / Session / MFA
+  # ----------------------------------------------------------------------------
+  # Non-secret auth settings. JWT_SECRET and JWT_REFRESH_SECRET are secrets and
+  # live in the "hms-secrets" Secret, NOT here.
+  #
+  # Access-token lifetime (kept short for security).
+  JWT_EXPIRES_IN: "15m"
+  # Refresh-token lifetime.
+  JWT_REFRESH_EXPIRES_IN: "7d"
+  # Idle session timeout, in minutes, before re-authentication is required.
+  SESSION_TIMEOUT_MINUTES: "30"
+  # TOTP issuer label shown in authenticator apps for MFA (privileged users).
+  MFA_ISSUER: "HMS"
+
+  # ----------------------------------------------------------------------------
+  # Email (SMTP) - appointment reminders & transactional notifications
+  # ----------------------------------------------------------------------------
+  # SMTP_PASSWORD is a secret and lives in the "hms-secrets" Secret, NOT here.
+  #
+  # SMTP server hostname - override per environment with the real SMTP host.
+  SMTP_HOST: "smtp.example.com"
+  # SMTP port (587 for STARTTLS, 465 for implicit TLS, 25 for plain).
+  SMTP_PORT: "587"
+  # Default "From" address for outbound HMS emails.
+  EMAIL_FROM: "no-reply@hms.local"
+
+  # ----------------------------------------------------------------------------
+  # SMS Provider - appointment reminders
+  # ----------------------------------------------------------------------------
+  # SMS_API_KEY is a secret and lives in the "hms-secrets" Secret, NOT here.
+  #
+  # SMS gateway identifier (e.g. twilio, sns, messagebird). Empty disables SMS;
+  # set per environment to enable SMS reminders.
+  SMS_PROVIDER: ""
+  # Sender ID / originating identifier displayed to recipients.
+  SMS_SENDER_ID: "HMS"
+
+  # ----------------------------------------------------------------------------
+  # AWS / File Uploads (patient identification documents & uploads)
+  # ----------------------------------------------------------------------------
+  # AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are secrets and live in the
+  # "hms-secrets" Secret, NOT here (prefer IAM roles for service accounts).
+  #
+  # AWS region for all AWS-backed resources (S3, etc.).
+  AWS_REGION: "us-east-1"
+  # S3 bucket for uploaded documents - override with the bucket provisioned in
+  # infrastructure/aws for the target environment.
+  AWS_S3_BUCKET: "hms-uploads"
+  # Maximum accepted upload size, in megabytes.
+  UPLOAD_MAX_SIZE_MB: "10"
+  # Upload storage backend: `s3` (uses the AWS_* values) or `local` (disk).
+  UPLOAD_STORAGE: "s3"
+
+  # ----------------------------------------------------------------------------
+  # Frontend / Gateway URLs (public-facing)
+  # ----------------------------------------------------------------------------
+  # Public URL where the React frontend is served (used for CORS & links) -
+  # override per environment with the real public URL.
+  FRONTEND_URL: "https://hms.example.com"
+  # Base URL the frontend (built with Vite) uses to reach the API gateway; the
+  # frontend appends `/api`. Override per environment with the gateway URL.
+  VITE_API_BASE_URL: "https://hms.example.com"

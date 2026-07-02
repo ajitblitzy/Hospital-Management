@@ -1,44 +1,101 @@
 # ===========================================================================
-# Hospital Management System (HMS) - LOCAL DEVELOPMENT orchestration.
-# One-command local environment (referenced by root package.json `docker:up`).
+# Hospital Management System (HMS) - LOCAL DEVELOPMENT orchestration
+# ---------------------------------------------------------------------------
+# One command spins up the entire HMS stack for local development:
+#     docker compose up --build            (or:  npm run docker:up)
 #
-# NOTE: The `version:` top-level key is intentionally omitted per the current
-# Compose specification.
+# Topology
+#   * Backing services : postgres (PostgreSQL 16), redis (Redis 7)
+#   * API gateway      : api-gateway (public entrypoint, default port 8080)
+#   * Microservices    : auth, patient, appointment, emr, pharmacy,
+#                        laboratory, billing, inventory, reports
+#   * Frontend         : React (Vite build) served by nginx on port 3000
 #
-# NOTE: The application service build contexts (./backend/*, ./frontend) depend
-# on Dockerfiles authored by the backend/ and frontend/ agents. Until those
-# exist, only the backing services (postgres, redis) can be started
-# (`docker compose up -d postgres redis`).
-#
-# NOTE: Production deployment uses Kubernetes manifests under infrastructure/;
-# do NOT place production secrets here. All values come from `.env` via ${VAR}.
-#
-# NOTE: Inside this compose network, service hostnames are the service names
-# (e.g. `postgres`, `redis`, `api-gateway`) - NOT `localhost`.
+# Conventions & notes
+#   * The obsolete top-level `version:` key is intentionally OMITTED per the
+#     current Compose Specification.
+#   * Inside this compose network a service is reached by its SERVICE NAME
+#     (e.g. `postgres`, `redis`, `api-gateway`) - NOT `localhost`. The root
+#     `.env.example` ships `POSTGRES_HOST=localhost` / `REDIS_HOST=localhost`
+#     (correct only for non-Docker runs), so every application service below
+#     OVERRIDES those hosts (and DATABASE_URL / REDIS_URL) to the compose
+#     service names via the shared `x-backend-env` anchor.
+#   * Secrets are NEVER hardcoded here - all values come from `.env` (through
+#     `env_file:` and `${VAR}` interpolation). Copy `.env.example` -> `.env`
+#     and fill in real secrets before `up`. `.env` is gitignored.
+#   * Application image build contexts (`./backend/*`, `./frontend`) rely on
+#     Dockerfiles authored by the backend/ and frontend/ service agents. Until
+#     those Dockerfiles exist you can still start the backing services alone:
+#         docker compose up -d postgres redis
+#   * PRODUCTION is deployed via the Kubernetes manifests under
+#     `infrastructure/` - do NOT place production secrets in this file.
 # ===========================================================================
 
+# ---------------------------------------------------------------------------
+# Reusable definitions (YAML anchors)
+# ---------------------------------------------------------------------------
+# Top-level `x-*` keys are Compose extension fields (ignored by the schema);
+# they exist purely to keep the service definitions DRY. To add a NEW backend
+# microservice, copy an existing service block (e.g. `auth-service`) and alias
+# these same anchors - nothing else needs to change.
+
+# Environment overrides applied to EVERY application service so that, inside the
+# compose network, they reach Postgres/Redis by SERVICE NAME rather than the
+# `localhost` shipped in `.env`. In Compose, `environment:` takes precedence
+# over `env_file:`, so these values win over the ones loaded from `.env`.
+x-backend-env: &backend-env
+  POSTGRES_HOST: postgres
+  REDIS_HOST: redis
+  # Rebuild the single-DSN forms too, because `@hms/shared` reads BOTH the
+  # discrete host vars AND the *_URL forms. Credentials/db/port still come from
+  # `.env` via interpolation - only the HOST is pinned to the compose service.
+  DATABASE_URL: "postgresql://${POSTGRES_USER:-hms_user}:${POSTGRES_PASSWORD:-change_me}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-hms}"
+  REDIS_URL: "redis://redis:${REDIS_PORT:-6379}"
+
+# Standard startup dependency for application services: do not start until BOTH
+# backing services report healthy (see each service's `healthcheck:` block).
+x-backend-deps: &backend-deps
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+
 services:
-  # ---- Backing services -------------------------------------------------
+  # =========================================================================
+  # Backing services
+  # =========================================================================
+
+  # PostgreSQL - primary relational datastore. The official image ALWAYS listens
+  # on 5432 inside the container; only the published HOST port is configurable
+  # (via POSTGRES_PORT). Data persists across restarts in the `pgdata` volume.
   postgres:
     image: postgres:16
     container_name: hms-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-hms}
+      POSTGRES_USER: ${POSTGRES_USER:-hms_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      # `$$` escapes the `$` so the CONTAINER shell expands these from the
+      # container's own environment (set just above) instead of Compose
+      # interpolating them at config time.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - hms-network
 
+  # Redis - caching, sessions, and asynchronous job processing. Local dev runs
+  # WITHOUT auth (the root `.env.example` ships an empty REDIS_PASSWORD);
+  # production auth is configured in the Kubernetes manifests. Data persists in
+  # the `redisdata` volume.
   redis:
     image: redis:7
     container_name: hms-redis
@@ -52,67 +109,181 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
     networks:
       - hms-network
 
-  # ---- Application services --------------------------------------------
-  # Build contexts reference folders authored by the backend/ agents.
-  # Additional microservices (emr, pharmacy, laboratory, billing, inventory,
-  # reports) follow the exact same pattern as the services below.
+  # =========================================================================
+  # Application services
+  # -------------------------------------------------------------------------
+  # Each builds from ./backend/<service> (Dockerfile authored by that service's
+  # agent), loads config from `.env`, overrides the DB/Redis hosts via the
+  # `x-backend-env` anchor, waits for Postgres + Redis to be healthy, and
+  # publishes its port. Ports come from `.env` (${*_SERVICE_PORT}); the SAME
+  # variable drives BOTH the published host port and the in-container listen
+  # port, so the gateway - which resolves `http://<service>:${*_SERVICE_PORT}` -
+  # and the service always agree on the port even if a code-level default drifts.
+  # =========================================================================
+
+  # Public entrypoint / reverse proxy fronting all microservices.
   api-gateway:
     build:
       context: ./backend/api-gateway
     container_name: hms-api-gateway
     restart: unless-stopped
     env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
     ports:
-      - "${API_GATEWAY_PORT:-8080}:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - "${API_GATEWAY_PORT:-8080}:${API_GATEWAY_PORT:-8080}"
     networks:
       - hms-network
 
+  # Authentication & authorization (login, JWT issuance, MFA, RBAC).
   auth-service:
     build:
       context: ./backend/auth-service
     container_name: hms-auth-service
     restart: unless-stopped
     env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
     ports:
-      - "${AUTH_SERVICE_PORT:-4001}:4001"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - "${AUTH_SERVICE_PORT:-4001}:${AUTH_SERVICE_PORT:-4001}"
     networks:
       - hms-network
 
+  # Patient registration & profile management (records, ID documents).
   patient-service:
     build:
       context: ./backend/patient-service
     container_name: hms-patient-service
     restart: unless-stopped
     env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
     ports:
-      - "${PATIENT_SERVICE_PORT:-4002}:4002"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - "${PATIENT_SERVICE_PORT:-4002}:${PATIENT_SERVICE_PORT:-4002}"
     networks:
       - hms-network
 
-  # ---- Frontend ---------------------------------------------------------
+  # Appointment management (doctor calendars, bookings, reminders).
+  appointment-service:
+    build:
+      context: ./backend/appointment-service
+    container_name: hms-appointment-service
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
+    ports:
+      - "${APPOINTMENT_SERVICE_PORT:-4003}:${APPOINTMENT_SERVICE_PORT:-4003}"
+    networks:
+      - hms-network
+
+  # Electronic Medical Records (clinical notes & patient history).
+  emr-service:
+    build:
+      context: ./backend/emr-service
+    container_name: hms-emr-service
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
+    ports:
+      - "${EMR_SERVICE_PORT:-4004}:${EMR_SERVICE_PORT:-4004}"
+    networks:
+      - hms-network
+
+  # Pharmacy (medicine inventory, prescriptions, expiry alerts).
+  pharmacy-service:
+    build:
+      context: ./backend/pharmacy-service
+    container_name: hms-pharmacy-service
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
+    ports:
+      - "${PHARMACY_SERVICE_PORT:-4005}:${PHARMACY_SERVICE_PORT:-4005}"
+    networks:
+      - hms-network
+
+  # Laboratory (lab orders and result reports).
+  laboratory-service:
+    build:
+      context: ./backend/laboratory-service
+    container_name: hms-laboratory-service
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
+    ports:
+      - "${LABORATORY_SERVICE_PORT:-4006}:${LABORATORY_SERVICE_PORT:-4006}"
+    networks:
+      - hms-network
+
+  # Billing & payments (invoices, insurance claims, payments).
+  billing-service:
+    build:
+      context: ./backend/billing-service
+    container_name: hms-billing-service
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
+    ports:
+      - "${BILLING_SERVICE_PORT:-4007}:${BILLING_SERVICE_PORT:-4007}"
+    networks:
+      - hms-network
+
+  # Inventory (medical supplies & stock management).
+  inventory-service:
+    build:
+      context: ./backend/inventory-service
+    container_name: hms-inventory-service
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
+    ports:
+      - "${INVENTORY_SERVICE_PORT:-4008}:${INVENTORY_SERVICE_PORT:-4008}"
+    networks:
+      - hms-network
+
+  # Reporting & analytics (operational & clinical reports).
+  reports-service:
+    build:
+      context: ./backend/reports-service
+    container_name: hms-reports-service
+    restart: unless-stopped
+    env_file: .env
+    environment: *backend-env
+    depends_on: *backend-deps
+    ports:
+      - "${REPORTS_SERVICE_PORT:-4009}:${REPORTS_SERVICE_PORT:-4009}"
+    networks:
+      - hms-network
+
+  # =========================================================================
+  # Frontend
+  # =========================================================================
+  # React single-page app built with Vite and served as static assets by nginx
+  # on port 3000 (see frontend/nginx.conf). The build context depends on the
+  # Dockerfile authored by the frontend agent.
   frontend:
     build:
       context: ./frontend
+      args:
+        # Vite inlines VITE_* variables at BUILD time into the static bundle the
+        # browser downloads, so the API base URL must be reachable from the
+        # USER'S BROWSER - i.e. the host-published gateway port, NOT the internal
+        # `api-gateway` service name (which only resolves inside this network).
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
     container_name: hms-frontend
     restart: unless-stopped
+    # Loaded for parity/local runs; note that Vite vars are baked at build time
+    # (above), so runtime env here does not affect the already-built bundle.
     env_file: .env
     ports:
       - "3000:3000"
@@ -121,10 +292,20 @@ services:
     networks:
       - hms-network
 
+# ===========================================================================
+# Shared network - every service above attaches to this single user-defined
+# bridge network, which gives them automatic DNS resolution by service name.
+# ===========================================================================
 networks:
   hms-network:
     driver: bridge
 
+# ===========================================================================
+# Named volumes - persist datastore state across `docker compose down`/`up`
+# (removed only with `docker compose down -v`).
+# ===========================================================================
 volumes:
   pgdata:
+    driver: local
   redisdata:
+    driver: local

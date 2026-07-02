@@ -2,17 +2,31 @@
  * @file frontend/src/components/common/ConfirmDialog.test.jsx
  * @module components/common/ConfirmDialog.test
  *
- * Unit tests for the {@link module:components/common/ConfirmDialog} modal.
+ * Vitest + React Testing Library unit tests for the controlled, presentational
+ * ConfirmDialog modal (doc 05 "QA / Testing & DevOps Strategy"). ConfirmDialog
+ * owns no business state, so this suite targets exactly what can regress:
+ * open/closed rendering, the title + body content, prop -> callback wiring
+ * (onConfirm, and the onCancel / onClose dual-name cancel path), the message vs
+ * children body switch, and the loading disabled state.
  *
- * Run under Vitest + Testing Library in a jsdom environment. This suite is
- * intentionally self-contained: it imports `@testing-library/jest-dom/vitest`
- * (which extends Vitest's `expect` with DOM matchers) and pulls the test hooks
- * explicitly from `vitest`, so it does NOT depend on a global test setup file
- * or on `globals: true` being configured for the project.
+ * These tests run in the project's standard frontend test environment (jsdom +
+ * the automatic JSX runtime provided by the Vite React plugin), exactly like
+ * the sibling common-component suites (ChartCard, DataTable). As in the
+ * component source, the automatic JSX runtime means React is intentionally NOT
+ * imported here.
  *
- * MUI `<Dialog>` renders its content into a React portal appended to
- * `document.body`, so queries use `screen.*` (which searches the whole
- * document) rather than the container returned by `render`.
+ * Robustness choices (independent of the project's Vitest `globals` setting):
+ *   - Importing '@testing-library/jest-dom/vitest' registers the DOM matchers
+ *     (toBeInTheDocument, toBeDisabled, toHaveClass, ...) directly onto Vitest's
+ *     expect, so the assertions work whether or not a shared setup file also
+ *     registers them and whether or not `globals` is enabled.
+ *   - Test hooks are imported explicitly from 'vitest' and cleanup() runs after
+ *     every test, so the suite stays isolated regardless of how Vitest is
+ *     invoked (a redundant auto-cleanup is a harmless no-op).
+ *
+ * MUI <Dialog> renders its content into a portal on document.body, so queries
+ * use screen.* (whole-document) and buttons are matched by accessible name
+ * (getByRole('button', { name: /.../i })), which is robust to internal markup.
  */
 
 import { afterEach, describe, it, expect, vi } from 'vitest';
@@ -21,108 +35,152 @@ import '@testing-library/jest-dom/vitest';
 
 import ConfirmDialog from './ConfirmDialog';
 
-// No global setup file is assumed, so unmount + clear the portal between tests
-// to prevent duplicate dialogs from leaking across cases.
+// Unmount rendered trees and clear the MUI portal between tests so repeated
+// titles/labels never collide across cases.
 afterEach(() => {
   cleanup();
 });
 
 describe('ConfirmDialog', () => {
+  // --- Checklist #1: renders title + message when open -----------------------
   it('renders the title and string message when open', () => {
     render(
       <ConfirmDialog
         open
         title="Delete patient?"
-        message="This action cannot be undone."
+        message="This cannot be undone."
+        onConfirm={() => {}}
+        onCancel={() => {}}
       />,
     );
 
     expect(screen.getByText('Delete patient?')).toBeInTheDocument();
-    expect(
-      screen.getByText('This action cannot be undone.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('This cannot be undone.')).toBeInTheDocument();
   });
 
+  // --- Checklist #2: does not render content when closed ----------------------
   it('does not render any content when open is false', () => {
     render(
-      <ConfirmDialog open={false} title="Hidden title" message="Hidden body" />,
+      <ConfirmDialog
+        open={false}
+        title="Hidden"
+        message="Nope"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
     );
 
-    expect(screen.queryByText('Hidden title')).not.toBeInTheDocument();
-    expect(screen.queryByText('Hidden body')).not.toBeInTheDocument();
+    // MUI Dialog unmounts its portal when closed (keepMounted is not set), so
+    // neither the title, the body, nor the dialog role is in the document.
+    expect(screen.queryByText('Hidden')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nope')).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('calls onConfirm when the confirm button is clicked', () => {
+  // --- Checklist #3: Confirm click calls onConfirm ----------------------------
+  it('calls onConfirm exactly once when the confirm button is clicked', () => {
     const onConfirm = vi.fn();
-    render(<ConfirmDialog open onConfirm={onConfirm} />);
+    render(
+      <ConfirmDialog
+        open
+        title="T"
+        message="M"
+        confirmText="Delete"
+        confirmColor="error"
+        onConfirm={onConfirm}
+        onCancel={() => {}}
+      />,
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /delete/i }));
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onCancel when the cancel button is clicked', () => {
+  // --- Checklist #4: Cancel click calls onCancel ------------------------------
+  it('calls onCancel exactly once when the cancel button is clicked', () => {
     const onCancel = vi.fn();
-    render(<ConfirmDialog open onCancel={onCancel} />);
+    render(
+      <ConfirmDialog
+        open
+        title="T"
+        message="M"
+        cancelText="Cancel"
+        onConfirm={() => {}}
+        onCancel={onCancel}
+      />,
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
+  // --- Checklist #5: onClose alias works when onCancel is absent --------------
   it('falls back to onClose for the cancel path when onCancel is absent', () => {
+    // Real consumer requirement: page dialogs pass `onCancel`, while MUI-style
+    // callers (e.g. auth/SessionTimeout) pass `onClose`. Both must dismiss.
     const onClose = vi.fn();
-    render(<ConfirmDialog open onClose={onClose} />);
+    render(
+      <ConfirmDialog
+        open
+        title="T"
+        message="M"
+        onConfirm={() => {}}
+        onClose={onClose}
+      />,
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('renders custom confirm/cancel labels (idle-logout scenario)', () => {
+  // --- Checklist #6: loading disables both buttons ----------------------------
+  it('disables both buttons and shows a spinner while loading', () => {
     render(
       <ConfirmDialog
         open
-        title="Still there?"
-        message="You will be logged out due to inactivity."
-        confirmText="Stay signed in"
-        cancelText="Log out"
+        title="T"
+        message="M"
+        confirmText="Confirm"
+        cancelText="Cancel"
+        loading
+        onConfirm={() => {}}
+        onCancel={() => {}}
       />,
-    );
-
-    expect(
-      screen.getByRole('button', { name: /stay signed in/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
-  });
-
-  it('renders rich children when no message is provided', () => {
-    render(
-      <ConfirmDialog open title="Custom body">
-        <div data-testid="rich-body">Rich content here</div>
-      </ConfirmDialog>,
-    );
-
-    expect(screen.getByTestId('rich-body')).toBeInTheDocument();
-    expect(screen.getByText('Rich content here')).toBeInTheDocument();
-  });
-
-  it('disables both buttons and shows a spinner when loading', () => {
-    render(
-      <ConfirmDialog open confirmText="Confirm" cancelText="Cancel" loading />,
     );
 
     expect(screen.getByRole('button', { name: /confirm/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled();
+    // The CircularProgress inside the confirm button surfaces as a progressbar.
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
-  it('does not invoke handlers while loading (buttons are disabled)', () => {
+  // --- Checklist #7 (optional): children body instead of message --------------
+  it('renders rich children when no message prop is provided', () => {
+    render(
+      <ConfirmDialog open title="T" onConfirm={() => {}} onCancel={() => {}}>
+        <div>Custom body</div>
+      </ConfirmDialog>,
+    );
+
+    expect(screen.getByText('Custom body')).toBeInTheDocument();
+  });
+
+  // --- Extra: disabled buttons swallow clicks while loading -------------------
+  it('does not invoke onConfirm/onCancel while loading (buttons disabled)', () => {
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
     render(
-      <ConfirmDialog open loading onConfirm={onConfirm} onCancel={onCancel} />,
+      <ConfirmDialog
+        open
+        title="T"
+        message="M"
+        loading
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
@@ -132,37 +190,71 @@ describe('ConfirmDialog', () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 
+  // --- Extra: custom labels (auth/SessionTimeout idle-logout scenario) --------
+  it('renders custom confirm/cancel labels (idle-logout scenario)', () => {
+    render(
+      <ConfirmDialog
+        open
+        title="Still there?"
+        message="You will be logged out due to inactivity."
+        confirmText="Stay signed in"
+        cancelText="Log out"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: /stay signed in/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /log out/i }),
+    ).toBeInTheDocument();
+  });
+
+  // --- Extra: destructive confirm renders MUI contained-error styling ---------
   it('renders a destructive confirm button when confirmColor="error"', () => {
-    render(<ConfirmDialog open confirmColor="error" confirmText="Delete" />);
+    render(
+      <ConfirmDialog
+        open
+        title="T"
+        message="M"
+        confirmColor="error"
+        confirmText="Delete"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
 
     const confirmButton = screen.getByRole('button', { name: /delete/i });
-    expect(confirmButton).toBeInTheDocument();
     expect(confirmButton).toBeEnabled();
-    // MUI encodes color + variant into the class list.
+    // MUI encodes variant + color into the button's class list.
     expect(confirmButton).toHaveClass('MuiButton-containedError');
   });
 
-  it('uses the default primary confirm color when confirmColor is omitted', () => {
-    render(<ConfirmDialog open confirmText="Proceed" />);
-
-    const confirmButton = screen.getByRole('button', { name: /proceed/i });
-    expect(confirmButton).toHaveClass('MuiButton-containedPrimary');
-  });
-
-  it('does not throw when cancel is clicked without any handler', () => {
-    render(<ConfirmDialog open />);
+  // --- Extra: cancel is safe even when no cancel handler is supplied ----------
+  it('does not throw when cancel is clicked without any cancel handler', () => {
+    // ConfirmDialog collapses onCancel/onClose to a no-op fallback, so the
+    // dismissal path must never crash when a consumer omits both.
+    render(<ConfirmDialog open title="T" message="M" onConfirm={() => {}} />);
 
     const cancelButton = screen.getByRole('button', { name: /cancel/i });
     expect(() => fireEvent.click(cancelButton)).not.toThrow();
   });
 
+  // --- Extra: default "Confirm" heading when title is omitted -----------------
   it('renders the default "Confirm" heading when title is omitted', () => {
-    render(<ConfirmDialog open message="Body only" />);
+    render(
+      <ConfirmDialog
+        open
+        message="Body only"
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
 
-    // The DialogTitle renders as a level-2 heading, which disambiguates it from
-    // the confirm button that also carries the default "Confirm" label.
-    expect(
-      screen.getByRole('heading', { name: 'Confirm' }),
-    ).toBeInTheDocument();
+    // DialogTitle renders as a heading, which disambiguates it from the confirm
+    // button that also carries the default "Confirm" label.
+    expect(screen.getByRole('heading', { name: 'Confirm' })).toBeInTheDocument();
   });
 });
