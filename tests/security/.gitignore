@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Machine-readable test output (JUnit XML, reports) — generated at runtime
+test-results/
+
+# Coverage (if ever enabled)
+coverage/
+.nyc_output/
+
+# Local environment / secrets (seeded creds, TOTP secrets) — never commit
+.env
+.env.*
+!.env.example
+
+# Logs & OS cruft
+*.log
+.DS_Store

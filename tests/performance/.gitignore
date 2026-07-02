@@ -1,0 +1,14 @@
+# Performance-test generated reports (k6 JSON + JUnit summaries).
+# The repo-root .gitignore also ignores test-results/, but this keeps the suite
+# self-contained if run in isolation.
+test-results/
+*.jtl
+*.log
+
+# Local environment overrides. k6 does NOT auto-load .env — see README for how the
+# suite reads env vars (defaults target the local docker-compose stack).
+.env
+.env.local
+
+# Node artifacts (present only if the npm-script wrappers are installed/used).
+node_modules/
